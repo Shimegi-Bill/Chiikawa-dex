@@ -2,8 +2,9 @@ name: 更新圖鑑
 
 on:
   schedule:
-    # 每星期一 香港時間 04:00（UTC 星期日 20:00）
-    - cron: '0 20 * * 0'
+    # 每兩日 香港時間 04:00（＝ UTC 前一日 20:00）
+    # cron 嘅「每兩日」係按每月日數計，所以月尾轉月頭可能會連續兩日行，冇所謂。
+    - cron: '0 20 1/2 * *'
   workflow_dispatch:        # 想即刻行就去 Actions 分頁手動撳
 
 concurrency:
@@ -13,6 +14,7 @@ concurrency:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: write
     steps:
@@ -22,24 +24,26 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 抓官網
+      - name: 抓官網（連圖）
         run: |
           cp catalog.json catalog.prev.json 2>/dev/null || true
           node scrape-chiikawa.mjs \
             --out catalog.json \
             --prev catalog.prev.json \
+            --imgw 320 \
             --slow 700
           rm -f catalog.prev.json
 
       - name: 睇下有冇新嘢
         id: diff
         run: |
-          if git diff --quiet -- catalog.json; then
+          if [ -z "$(git status --porcelain -- catalog.json img)" ]; then
             echo "changed=no" >> "$GITHUB_OUTPUT"
             echo "官網冇新嘢，唔使 commit"
           else
             echo "changed=yes" >> "$GITHUB_OUTPUT"
             echo "count=$(node -e "console.log(require('./catalog.json').length)")" >> "$GITHUB_OUTPUT"
+            echo "pics=$(ls img 2>/dev/null | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit
@@ -47,6 +51,6 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add catalog.json
-          git commit -m "圖鑑更新：${{ steps.diff.outputs.count }} 件（$(date -u +%Y-%m-%d)）"
+          git add catalog.json img
+          git commit -m "圖鑑更新：${{ steps.diff.outputs.count }} 件 · ${{ steps.diff.outputs.pics }} 張相（$(date -u -d '+8 hours' +%Y-%m-%d)）"
           git push
