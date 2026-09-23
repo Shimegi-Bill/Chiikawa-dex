@@ -9,6 +9,9 @@
  *                                                  新嘢先會打「新」標籤
  *   node scrape-chiikawa.mjs --imgw 320          → 存落本機嘅圖片闊度（預設 320px）
  *   node scrape-chiikawa.mjs --no-images         → 唔存圖，淨係記官網網址
+ *   node scrape-chiikawa.mjs --no-gotochi        → 唔抓 ご当地（日本地區限定・鐵牌）
+ *   node scrape-chiikawa.mjs --gotochi-images    → 連 ご当地 啲相都 mirror 落 repo
+ *                                                  （預設唔 mirror，見下面嘅注意）
  *
  * 需要 Node 18 以上（用內建 fetch），唔使裝任何 package。
  * 抓完之後去 app 嘅「資料」分頁 →「匯入 catalog.json」。
@@ -22,8 +25,18 @@
  * 一齊 commit 上 repo。官網將來落架咗、換咗相都照樣睇到。
  * 已經有嘅唔會再下載，所以第一次行之後每次只加新嘢。
  *
- * 抓唔到嘅：ちいかわくじ（online-kuji.chiikawamarket.jp）係 JavaScript 渲染，
- * 冇公開 JSON。一番賞／くじ 嘅賞品要喺 app 入面手動加。
+ * 兩個來源：
+ *   ① chiikawamarket.jp     —— 官方網店全部周邊（地區＝日本）
+ *   ② jp-api.com NOD62      —— ご当地ちいかわ，即係日本各地限定，
+ *                              包括鐵牌（プレートマグネット）。地區＝日本地區限定。
+ *
+ * ⚠ jp-api 個網寫明「無断転載・無断使用お断り」，所以預設淨係記低佢嘅圖片網址，
+ *   唔會 mirror 落你個公開 repo。要 mirror 就自己加 --gotochi-images。
+ *
+ * 抓唔到嘅：
+ *   · ちいかわくじ（online-kuji.chiikawamarket.jp）係 JavaScript 渲染，冇公開 JSON
+ *   · 香港／台灣／大陸／韓國／澳門版 —— 各地代理各自發行，冇統一目錄
+ *   呢兩類放喺 manual.json，Action 唔會覆蓋，app 會自動 merge。
  */
 
 const BASE = 'https://chiikawamarket.jp';
@@ -35,6 +48,8 @@ const DELAY = +argv('slow', 400);
 const IMGW = +argv('imgw', 320);
 const IMGDIR = argv('imgdir', 'img');
 const NOIMG = args.includes('--no-images');
+const NO_GOTOCHI = args.includes('--no-gotochi');
+const GOTOCHI_IMG = args.includes('--gotochi-images');
 const TODAY = new Date().toISOString().slice(0, 10);
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -136,6 +151,77 @@ async function getJSON(url, tries = 3) {
   }
 }
 
+/* ══ ② ご当地ちいかわ（jp-api.com）══════════════════════════
+   純 HTML、Shift_JIS、六版。每件嘢係一張 <img>，title 係
+   「地名　品名」，例如「東京スカイツリー　プレートマグネット」。
+   冇價錢冇發售日，所以嗰兩欄留空。
+═════════════════════════════════════════════════════════════ */
+const GT_BASE = 'https://www.jp-api.com';
+const OVERSEAS = [
+  [/香港|ホンコン|Hong ?Kong/i, 'hk'], [/台湾|台灣|台北|Taiwan|Taipei/i, 'tw'],
+  [/韓国|ソウル|Korea|Seoul/i, 'kr'], [/マカオ|澳門|Macau/i, 'mo'],
+  [/上海|北京|広州|中国/i, 'cn'], [/シンガポール|バンコク|Singapore|Bangkok/i, 'sea'],
+];
+
+function gotochiCat(name) {
+  const m = [
+    [/プレートマグネット|メタルプレート|鉄板|マグネット/, 'plate'],
+    [/ぬいぐるみキーチェーン|マスコットキーホルダー|マスコット/, 'mascot'],
+    [/ダイカットキーホルダー|キーホルダー|キーリング/, 'keyring'],
+    [/ソックス|靴下/, 'socks'], [/タオル/, 'towel'],
+    [/ポーチ|バッグ/, 'bag'], [/千社札|ステッカー|シール/, 'stationery'],
+    [/メダル/, 'other'], [/ティッシュケース/, 'other'],
+    [/ぬいぐるみ/, 'plush'], [/缶バッジ|バッジ/, 'badge'],
+  ];
+  for (const [re, v] of m) if (re.test(name)) return v;
+  return 'other';
+}
+
+async function getHTML(url) {
+  try {
+    const r = await fetch(url, { headers: { 'User-Agent': 'chiikawa-dex/1.0' } });
+    if (!r.ok) return '';
+    return new TextDecoder('shift_jis').decode(await r.arrayBuffer());
+  } catch (e) { console.warn('  ✗', url, e.message); return ''; }
+}
+
+async function gotochi() {
+  const out = [];
+  const seen = new Set();
+  for (let page = 1; page <= 12; page++) {
+    const url = page === 1 ? `${GT_BASE}/contents/NOD62/` : `${GT_BASE}/contents/NOD62/PGE${page}/`;
+    const html = await getHTML(url);
+    if (!html) break;
+    const rows = [...html.matchAll(/<img[^>]+src="(\/images\/tphoto_(\d+)_0_b\.(?:jpg|png))"[^>]*(?:alt|title)="([^"]*)"/gi)];
+    if (!rows.length) break;
+    let added = 0;
+    for (const [, src, pid, raw] of rows) {
+      if (seen.has(pid)) continue;
+      seen.add(pid);
+      const title = raw.replace(/&amp;/g, '&').trim();
+      if (!title) continue;
+      // 「地名　品名」——全形空格分隔，所以要喺壓縮空白之前先切
+      const place = title.split(/[\u3000\s]+/)[0].trim();
+      const rg = OVERSEAS.find(([re]) => re.test(title))?.[1] || 'jp_local';
+      out.push({
+        id: 'gt-' + pid,
+        n: title.replace(/\s+/g, ' '), ja: title.replace(/\s+/g, ' '),
+        ch: guessChars(title), se: 'gotochi', ca: gotochiCat(title),
+        t: 'g', d: '', p: 0,
+        rg, pl: place,
+        img: '', imgr: GT_BASE + src,
+        url, fs: '',
+      });
+      added++;
+    }
+    process.stdout.write(`\r  ご当地 第 ${page} 版 · 累計 ${out.length} 件   `);
+    if (!added) break;
+    await sleep(DELAY);
+  }
+  console.log(`\r  ご当地：${out.length} 件（其中鐵牌 ${out.filter(x => x.ca === 'plate').length} 件）      `);
+  return out;
+}
+
 async function collection(handle, label) {
   const ids = new Set();
   for (let page = 1; page <= 60; page++) {
@@ -212,6 +298,7 @@ async function main() {
       se: seOf.get(id) || 'standard',
       ca: caOf.get(id) || guessCat(title, p.product_type),
       t: 'g',
+      rg: 'jp', pl: '',
       d: (p.published_at || '').slice(0, 10),   // 官網上架日
       p: Math.round(+(v?.price || 0)),
       img: '',                                       // 本機備份，下面補
@@ -242,16 +329,34 @@ async function main() {
     console.log(`\r  存圖好晒：${got}/${out.length} 有相，今次新下載 ${fresh} 張      `);
   }
 
-  // 同名同價嘅重複項清走
+  // ── ② ご当地 ──────────────────────────────────────────
+  let gt = [];
+  if (!NO_GOTOCHI) {
+    console.log('\n抓 ご当地（日本地區限定・鐵牌）…');
+    gt = await gotochi();
+    for (const x of gt) x.fs = firstSeen[x.id] || TODAY;
+    if (GOTOCHI_IMG && !NOIMG) {
+      let n = 0;
+      for (const x of gt) { x.img = await saveImage(x.imgr, x.id, fsp) || ''; if (x.img) n++; await sleep(120); }
+      console.log(`  ご当地 存圖 ${n}/${gt.length}`);
+    } else {
+      for (const x of gt) x.img = x.imgr;   // 唔 mirror，直接指向 jp-api
+    }
+  }
+
+  // 重複項清走
   const seen = new Set();
-  const dedup = out.filter(x => { if (seen.has(x.id)) return false; seen.add(x.id); return true; });
+  const dedup = [...out, ...gt].filter(x => { if (seen.has(x.id)) return false; seen.add(x.id); return true; });
 
   const { writeFile } = await import('node:fs/promises');
   await writeFile(OUT, JSON.stringify(dedup, null, 1));
   const fresh = dedup.filter(x => x.fs === TODAY).length;
+  const byRg = {};
+  for (const x of dedup) byRg[x.rg] = (byRg[x.rg] || 0) + 1;
   console.log(`\n✓ 寫好 ${OUT} —— ${dedup.length} 件` +
     (PREV ? `，其中 ${fresh} 件係今次新見到` : ''));
-  console.log('  去 app 嘅「資料」分頁 →「匯入 catalog.json」就得。');
+  console.log('  地區分佈：' + Object.entries(byRg).map(([k, v]) => `${k} ${v}`).join(' · '));
+  console.log('  香港／台灣／大陸／韓國／澳門限定同一番賞放 manual.json，呢支 script 唔會掂。');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });

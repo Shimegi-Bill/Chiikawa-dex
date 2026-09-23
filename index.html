@@ -11,7 +11,7 @@
 <script>
   /* 喺畫面畫出嚟之前就定好主題，唔會閃一下白／黑 */
   (function () {
-    var t = localStorage.getItem('ck.theme') || 'auto';
+    var t = localStorage.getItem('ck.theme') || 'light';
     var dark = t === 'dark' || (t === 'auto' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -126,6 +126,7 @@ tailwind.config = {
   .chip.ch{color:var(--rose)}
   .chip.se{color:var(--sky)}
   .chip.ca{color:var(--mint)}
+  .chip.rg{color:var(--gold);border-color:var(--gold)}
 
   .tag{font-size:.75rem;padding:.25rem .7rem;border-radius:99px;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);transition:.14s}
@@ -147,16 +148,29 @@ tailwind.config = {
   .bar{height:.44rem;border-radius:99px;background:var(--track);overflow:hidden}
   .bar>span{display:block;height:100%;background:var(--gold);border-radius:99px}
 
-  .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
-  @media (max-width:900px){.grid-3,.grid-4{grid-template-columns:repeat(3,minmax(0,1fr))}}
-  @media (max-width:640px){.grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .dexgrid{display:grid;gap:.75rem;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
+  /* 欄數愈多，卡入面啲字就縮細啲，唔會迫爆 */
+  .dexgrid[style*="--cols:6"] .meta,
+  .dexgrid[style*="--cols:7"] .meta,
+  .dexgrid[style*="--cols:8"] .meta{font-size:.9em;padding:.44rem}
+  .dexgrid[style*="--cols:7"] .chip,
+  .dexgrid[style*="--cols:8"] .chip{display:none}
 
   .tabbtn{padding:.56rem .25rem;border-bottom:2px solid transparent;color:var(--dim);font-weight:700;font-size:.9rem}
   .tabbtn[aria-selected="true"]{color:var(--paper);border-bottom-color:var(--gold)}
   .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .scroll-x::-webkit-scrollbar{height:6px}
   .scroll-x::-webkit-scrollbar-thumb{background:var(--edge);border-radius:99px}
+
+  /* ── 分段 ──────────────────────────────────────────── */
+  .sechead{width:100%;display:flex;align-items:baseline;gap:.75rem;margin-bottom:.75rem;
+    padding-bottom:.44rem;border-bottom:1px solid var(--ink3);text-align:left}
+  .sechead h2{font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:1.05rem;
+    white-space:nowrap;color:var(--paper)}
+  .sechead .bar{flex:1;min-width:2rem;transform:translateY(-.15rem)}
+  .sechead .tally{color:var(--dim);font-size:.75rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .sechead .caret{color:var(--dim);font-size:.7rem;width:.8rem;text-align:center}
+  .sechead:hover h2{color:var(--gold)}
 
   .iconbtn{width:1.9rem;height:1.9rem;border-radius:.44rem;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);display:grid;place-items:center;font-size:.8rem;font-weight:700}
@@ -207,54 +221,42 @@ tailwind.config = {
 <section id="tab-dex" class="pt-4">
 
   <div class="flex gap-2 flex-wrap items-center mb-3">
-    <input id="q" class="field flex-1 min-w-[180px]" placeholder="搵名、系列、賞別…" autocomplete="off">
-    <select id="sort" class="field w-auto">
-      <option value="date-desc">發售日（新→舊）</option>
-      <option value="date-asc">發售日（舊→新）</option>
-      <option value="name">名稱</option>
-      <option value="price-desc">價錢（高→低）</option>
-      <option value="price-asc">價錢（低→高）</option>
+    <input id="q" class="field flex-1 min-w-[11rem]" placeholder="搵名、角色、系列、賞別…" autocomplete="off">
+    <select id="groupBy" class="field w-auto" aria-label="點樣分段">
+      <option value="se">按系列分段</option>
+      <option value="ch">按角色分段</option>
+      <option value="ca">按類別分段</option>
+      <option value="rg">按發行地區分段</option>
+      <option value="place">按限定地點分段</option>
+      <option value="month">按發售月份分段</option>
     </select>
-    <div class="flex rounded-lg overflow-hidden border border-ink3" role="group" aria-label="每行欄數">
-      <button class="px-3 py-[6px] text-[.78rem] font-bold" id="col3">3欄</button>
-      <button class="px-3 py-[6px] text-[.78rem] font-bold" id="col4">4欄</button>
-    </div>
+    <select id="viewBy" class="field w-auto" aria-label="顯示邊啲">
+      <option value="all">全部</option>
+      <option value="miss">淨係未入手</option>
+      <option value="own">淨係已入手</option>
+      <option value="want">想要</option>
+      <option value="dup">有重複</option>
+      <option value="new">新登場</option>
+    </select>
+    <select id="cols" class="field w-auto" aria-label="每行欄數">
+      <option value="3">3 欄</option><option value="4">4 欄</option>
+      <option value="5">5 欄</option><option value="6">6 欄</option>
+      <option value="7">7 欄</option><option value="8">8 欄</option>
+    </select>
   </div>
 
-  <div class="space-y-2 mb-4">
-    <div class="flex gap-2 items-center">
-      <span class="text-dim text-[.7rem] w-9 shrink-0">狀態</span>
-      <div class="scroll-x flex gap-2 pb-1" id="fStatus"></div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <span class="text-dim text-[.7rem] w-9 shrink-0">類型</span>
-      <div class="scroll-x flex gap-2 pb-1" id="fType"></div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <span class="text-dim text-[.7rem] w-9 shrink-0">角色</span>
-      <div class="scroll-x flex gap-2 pb-1" id="fChar"></div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <span class="text-dim text-[.7rem] w-9 shrink-0">系列</span>
-      <div class="scroll-x flex gap-2 pb-1" id="fSeries"></div>
-    </div>
-    <div class="flex gap-2 items-center">
-      <span class="text-dim text-[.7rem] w-9 shrink-0">類別</span>
-      <div class="scroll-x flex gap-2 pb-1" id="fCat"></div>
-    </div>
-  </div>
-
-  <div class="flex items-center justify-between mb-3 text-[.76rem]">
+  <div class="flex items-center justify-between mb-5 text-[.76rem]">
     <div class="text-dim"><span id="resultCount">0</span> 件　<span id="resultOwned" class="text-gold"></span></div>
     <div class="flex gap-2">
-      <button class="btn btn-ghost" id="clearFilters">清除篩選</button>
+      <button class="btn btn-ghost" id="foldAll">全部摺埋</button>
+      <button class="btn btn-ghost" id="clearFilters">重設</button>
       <button class="btn btn-gold" id="addItem">＋ 自訂加入</button>
     </div>
   </div>
 
-  <div id="grid" class="grid grid-4 gap-3"></div>
-  <button id="more" class="hidden btn btn-ghost w-full mt-4">再顯示（仲有 <span id="moreCount"></span> 件）</button>
-  <p id="empty" class="hidden text-center text-dim py-16 text-sm">冇符合條件嘅項目。試下清除篩選，或者自訂加入一件。</p>
+  <div id="sections" class="space-y-9"></div>
+
+  <p id="empty" class="hidden text-center text-dim py-16 text-sm">冇符合條件嘅項目。撳「重設」睇返全部。</p>
   <div id="blank" class="hidden text-center py-20 px-6">
     <p class="font-round font-bold text-lg mb-2">圖鑑仲係空</p>
     <p class="text-dim text-sm leading-relaxed max-w-[26rem] mx-auto">
@@ -334,6 +336,11 @@ tailwind.config = {
       <button class="btn btn-ghost" id="expCatalog">匯出現時圖鑑</button>
       <button class="btn btn-ghost" id="resetCatalog">還原內建圖鑑</button>
     </div>
+    <p class="text-dim text-[.78rem] mt-4 mb-2">
+      香港／台灣／大陸／韓國／澳門限定同一番賞爬唔到，喺圖鑑頁「＋ 自訂加入」入咗之後，
+      匯出做 <code class="text-mint">manual.json</code> commit 上 repo，兩部機都會見到。
+    </p>
+    <button class="btn btn-gold" id="expManual">匯出自訂項目做 manual.json</button>
     <label class="flex items-center gap-2 text-[.78rem] text-dim mt-3">
       <input type="checkbox" id="autoCat" class="accent-gold"> 每次開頁檢查 catalog.json 有冇更新
     </label>
@@ -393,12 +400,19 @@ tailwind.config = {
       <label class="block"><span class="text-dim text-[.72rem]">類別</span><select id="eCa" class="field mt-1"></select></label>
     </div>
     <div class="grid grid-cols-2 gap-3">
+      <label class="block"><span class="text-dim text-[.72rem]">發行地區</span><select id="eRg" class="field mt-1"></select></label>
+      <label class="block"><span class="text-dim text-[.72rem]">限定地點</span>
+        <input id="ePl" class="field mt-1" placeholder="例：香港迪士尼、首爾、東京晴空塔"></label>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
       <label class="block"><span class="text-dim text-[.72rem]">定價（日圓）</span><input id="ePrice" type="number" class="field mt-1" placeholder="1650"></label>
       <label class="block"><span class="text-dim text-[.72rem]">官網連結</span><input id="eUrl" class="field mt-1" placeholder="https://…"></label>
     </div>
     <label class="block"><span class="text-dim text-[.72rem]">參考相片網址</span>
       <input id="eImg" class="field mt-1" placeholder="https://chiikawamarket.jp/cdn/shop/files/…jpg"></label>
-    <div class="flex gap-2 justify-end pt-1">
+    <div class="flex gap-2 items-center pt-1">
+      <button type="button" class="btn btn-ghost !border-rose/60 !text-rose hidden" id="editorDelete">刪除</button>
+      <span class="flex-1"></span>
       <button type="button" class="btn btn-ghost" id="editorCancel">取消</button>
       <button type="button" class="btn btn-gold" id="editorSave">儲存</button>
     </div>
@@ -409,36 +423,52 @@ tailwind.config = {
 
 <script>
 /* ══════════════════════════════════════════════════════════
-   標籤字典 —— 全部用香港慣用叫法
-   覺得邊個名唔啱就喺呢度改，成個 app 同篩選都會跟住變。
-   n = 顯示名　ja = 日文原名（搜尋用）　c1/c2 = 無圖時嘅底色　g = 代表字
+   標籤字典 —— 全部用香港叫法
+   覺得邊個名唔啱就喺呢度改，成個 app 同分段都會跟住變。
+   n = 顯示名　ja = 日文原名　alt = 其他叫法（淨係用嚟搵嘢）
+   c1/c2 = 冇圖時嘅底色　g = 代表字
 ════════════════════════════════════════════════════════════ */
 const CHARS = {
-  chiikawa:  { n:'吉伊卡哇',   ja:'ちいかわ',       c1:'#FFF3D6', c2:'#E8C98A', g:'吉' },
-  hachiware: { n:'小八',       ja:'ハチワレ',       c1:'#D8F0FF', c2:'#8FC4E8', g:'八' },
-  usagi:     { n:'烏薩奇',     ja:'うさぎ',         c1:'#FFF0C9', c2:'#EFC65C', g:'烏' },
-  momonga:   { n:'小桃',       ja:'モモンガ',       c1:'#FFE3EE', c2:'#F0A5C4', g:'桃' },
-  kurimanju: { n:'栗子饅頭',   ja:'くりまんじゅう', c1:'#F5DEC2', c2:'#C89563', g:'栗' },
-  rakko:     { n:'海獺',       ja:'ラッコ',         c1:'#E6D9CC', c2:'#A88B73', g:'獺' },
-  shisa:     { n:'獅獅',       ja:'シーサー',       c1:'#FFE0D0', c2:'#E89A76', g:'獅' },
-  furuhonya: { n:'舊書店',     ja:'古本屋',         c1:'#DCD6EE', c2:'#9A8EC4', g:'書' },
-  anoko:     { n:'嗰個細路',   ja:'あのこ',         c1:'#E4EEDC', c2:'#9DBA8C', g:'嗰' },
-  dekatsuyo: { n:'大又強',     ja:'でかつよ',       c1:'#E8E2D6', c2:'#B0A48E', g:'強' },
-  ode:       { n:'歐帝',       ja:'オデ',           c1:'#F0E2D2', c2:'#C0A183', g:'歐' },
-  chimaera:  { n:'奇美拉',     ja:'キメラ',         c1:'#DDD2E8', c2:'#9484AF', g:'奇' },
-  yoroisan:  { n:'鎧甲先生',   ja:'鎧さん',         c1:'#D9DEE6', c2:'#8A93A3', g:'鎧' },
-  beetle:    { n:'甲蟲',       ja:'カブトムシ',     c1:'#D6DCC8', c2:'#8B9470', g:'甲' },
-  goblin:    { n:'哥布林',     ja:'ゴブリン',       c1:'#D4E4DA', c2:'#84A895', g:'哥' },
-  star:      { n:'星星',       ja:'星',             c1:'#FFF6D2', c2:'#E5CE7A', g:'星' },
-  muchauman: { n:'好味超人',   ja:'むちゃうマン',   c1:'#FFDDD6', c2:'#DD8E7C', g:'味' },
-  siren:     { n:'塞壬',       ja:'セイレーン',     c1:'#D4E8F2', c2:'#7FADC2', g:'塞' },
-  shimajiro: { n:'島次郎',     ja:'シマジロウ',     c1:'#E8E0D0', c2:'#B09E7E', g:'島' },
-  bird:      { n:'「鳥」',     ja:'「鳥」',         c1:'#E0E6EE', c2:'#93A0B2', g:'鳥' },
-  mixed:     { n:'大合集',     ja:'いろいろ',       c1:'#EADFEE', c2:'#A98FB4', g:'合' },
+  chiikawa:  { n:'吉伊卡哇', ja:'ちいかわ',       alt:'小可愛 Chiikawa',        c1:'#FFF3D6', c2:'#E8C98A', g:'吉' },
+  hachiware: { n:'小八',     ja:'ハチワレ',       alt:'八貓 Hachiware',          c1:'#D8F0FF', c2:'#8FC4E8', g:'八' },
+  usagi:     { n:'兔兔',     ja:'うさぎ',         alt:'烏薩奇 Usagi',            c1:'#FFF0C9', c2:'#EFC65C', g:'兔' },
+  momonga:   { n:'飛鼠',     ja:'モモンガ',       alt:'小桃 Momonga',            c1:'#FFE3EE', c2:'#F0A5C4', g:'鼠' },
+  kurimanju: { n:'栗子饅頭', ja:'くりまんじゅう', alt:'栗饅 Kurimanju',          c1:'#F5DEC2', c2:'#C89563', g:'栗' },
+  rakko:     { n:'師父',     ja:'ラッコ',         alt:'海獺 獺師父 Rakko',       c1:'#E6D9CC', c2:'#A88B73', g:'師' },
+  shisa:     { n:'獅獅',     ja:'シーサー',       alt:'風獅爺 Shisa',            c1:'#FFE0D0', c2:'#E89A76', g:'獅' },
+  furuhonya: { n:'古本木',   ja:'古本屋',         alt:'舊書店 二手書店 Furuhonya',c1:'#DCD6EE', c2:'#9A8EC4', g:'古' },
+  anoko:     { n:'那個細路', ja:'あのこ',         alt:'嗰個細路 Anoko',          c1:'#E4EEDC', c2:'#9DBA8C', g:'那' },
+  dekatsuyo: { n:'大又強',   ja:'でかつよ',       alt:'大強 Dekatsuyo',          c1:'#E8E2D6', c2:'#B0A48E', g:'強' },
+  ode:       { n:'歐帝',     ja:'オデ',           alt:'Ode',                     c1:'#F0E2D2', c2:'#C0A183', g:'歐' },
+  chimaera:  { n:'奇美拉',   ja:'キメラ',         alt:'Chimaera',                c1:'#DDD2E8', c2:'#9484AF', g:'奇' },
+  yoroisan:  { n:'鎧甲先生', ja:'鎧さん',         alt:'鎧甲 Yoroi',              c1:'#D9DEE6', c2:'#8A93A3', g:'鎧' },
+  beetle:    { n:'甲蟲',     ja:'カブトムシ',     alt:'獨角仙 Beetle',           c1:'#D6DCC8', c2:'#8B9470', g:'甲' },
+  goblin:    { n:'哥布林',   ja:'ゴブリン',       alt:'Goblin',                  c1:'#D4E4DA', c2:'#84A895', g:'哥' },
+  star:      { n:'星星',     ja:'星',             alt:'Star',                    c1:'#FFF6D2', c2:'#E5CE7A', g:'星' },
+  muchauman: { n:'好味超人', ja:'むちゃうマン',   alt:'Muchauman',               c1:'#FFDDD6', c2:'#DD8E7C', g:'味' },
+  siren:     { n:'賽蓮',     ja:'セイレーン',     alt:'塞壬 海妖 Siren',         c1:'#D4E8F2', c2:'#7FADC2', g:'賽' },
+  ningyo:    { n:'人魚',     ja:'人魚',           alt:'美人魚 Mermaid',          c1:'#CFE6E4', c2:'#75AAA8', g:'魚' },
+  shimajiro: { n:'島次郎',   ja:'シマジロウ',     alt:'Shimajiro',               c1:'#E8E0D0', c2:'#B09E7E', g:'島' },
+  bird:      { n:'「鳥」',   ja:'「鳥」',         alt:'Bird',                    c1:'#E0E6EE', c2:'#93A0B2', g:'鳥' },
+  mixed:     { n:'大合集',   ja:'いろいろ',       alt:'全員 合集',               c1:'#EADFEE', c2:'#A98FB4', g:'合' },
+};
+
+/* 發行地區 —— 香港／台灣／大陸／韓國／澳門版分得清楚 */
+const REGIONS = {
+  jp:       '日本',
+  jp_local: '日本地區限定',
+  hk:       '香港',
+  tw:       '台灣',
+  cn:       '中國大陸',
+  kr:       '韓國',
+  mo:       '澳門',
+  sea:      '東南亞',
+  other:    '其他海外',
 };
 
 const SERIES = {
   standard:    '基本款',
+  gotochi:     '地區限定（ご当地）',
   park:        '吉伊卡哇公園',
   movie:       '吉伊卡哇電影版',
   suppaiman:   '×酸梅超人',
@@ -461,6 +491,7 @@ const SERIES = {
   giants:      '×讀賣巨人',
   hankyu:      '×阪急電車',
   odekake:     '出街好開心！',
+  popup:       '期間限定店',
   kuji:        '一番賞・抽獎',
 };
 
@@ -468,11 +499,13 @@ const CATS = {
   plush:      '公仔',
   mascot:     '掛飾公仔',
   keyring:    '鎖匙扣',
+  plate:      '鐵牌・磁石牌',
   badge:      '襟章',
   acrylic:    '亞加力企牌',
   figure:     '模型',
   stationery: '文具',
   apparel:    'T恤・衫褲',
+  socks:      '襪',
   hat:        '帽',
   bag:        '袋・散紙包',
   towel:      '毛巾',
@@ -485,9 +518,9 @@ const CATS = {
   other:      '其他',
 };
 
-/* 圖鑑內容全部由 GitHub Action 抓官網寫入 catalog.json，開頁自動載入。
-   本機用 file:// 開就要喺「資料」分頁手動匯入。
-   一番賞要用「＋ 自訂加入」手動加（ちいかわくじ 官網係 SPA，爬唔到）。 */
+/* 圖鑑內容由 GitHub Action 抓官網寫入 catalog.json，開頁自動載入。
+   manual.json 係你自己維護嗰份（香港／台灣／大陸／韓國／澳門限定、
+   一番賞賞品等等），Action 唔會掂，會 merge 埋落圖鑑。 */
 const BUILTIN = [];
 
 </script>
@@ -513,8 +546,9 @@ const write = (k, v) => {
 
 let CATALOG = [];
 let COL = read(K_COL, {});
-let UI = Object.assign({ cols: 4, sort: 'date-desc' }, read(K_UI, {}));
-let F = { q: '', status: 'all', type: 'all', ch: new Set(), se: new Set(), ca: new Set() };
+let UI = Object.assign({ cols: 4, group: 'se', view: 'all', closed: {} }, read(K_UI, {}));
+UI.cols = Math.min(8, Math.max(3, +UI.cols || 4));
+let F = { q: '' };
 let editingId = null;
 
 /* ── 圖鑑組裝 ──────────────────────────────────────────── */
@@ -528,6 +562,7 @@ function loadCatalog() {
     ch: Array.isArray(x.ch) && x.ch.length ? x.ch : ['mixed'],
     se: x.se || 'standard', ca: x.ca || 'other', t: x.t || 'g',
     n: x.n || x.title || '(未命名)', d: x.d || '', p: +x.p || 0,
+    rg: x.rg || 'jp', pl: x.pl || '',
   }));
   $('#catalogInfo').textContent =
     `現時 ${CATALOG.length} 件　·　${Array.isArray(imported) && imported.length ? '已匯入官網資料' : '內建種子資料'}` +
@@ -549,36 +584,53 @@ function setState(id, s) {
   refresh();
 }
 
-/* ── 篩選 ─────────────────────────────────────────────── */
+/* ── 揀出要顯示嘅 ──────────────────────────────────────── */
 function filtered() {
   const q = F.q.trim().toLowerCase();
-  let out = CATALOG.filter(it => {
-    if (F.type !== 'all' && it.t !== F.type) return false;
+  return CATALOG.filter(it => {
     const s = st(it.id);
-    if (F.status === 'own' && s !== 1) return false;
-    if (F.status === 'miss' && s === 1) return false;
-    if (F.status === 'want' && s !== 2) return false;
-    if (F.status === 'dup' && !(s === 1 && qty(it.id) > 1)) return false;
-    if (F.status === 'new' && !isNew(it)) return false;
-    if (F.ch.size && !it.ch.some(c => F.ch.has(c))) return false;
-    if (F.se.size && !F.se.has(it.se)) return false;
-    if (F.ca.size && !F.ca.has(it.ca)) return false;
+    switch (UI.view) {
+      case 'own':  if (s !== 1) return false; break;
+      case 'miss': if (s === 1) return false; break;
+      case 'want': if (s !== 2) return false; break;
+      case 'dup':  if (!(s === 1 && qty(it.id) > 1)) return false; break;
+      case 'new':  if (!isNew(it)) return false; break;
+    }
     if (q) {
-      const hay = [it.n, it.ja, it.ks, it.pr, SERIES[it.se], CATS[it.ca],
-                   ...it.ch.map(c => CHARS[c]?.n), ...it.ch.map(c => CHARS[c]?.ja)]
+      const hay = [it.n, it.ja, it.ks, it.pr, it.pl, SERIES[it.se], CATS[it.ca], REGIONS[it.rg],
+                   ...it.ch.flatMap(c => [CHARS[c]?.n, CHARS[c]?.ja, CHARS[c]?.alt])]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
-  const by = UI.sort;
-  out.sort((a, b) => {
-    if (by === 'name') return a.n.localeCompare(b.n, 'zh-Hant');
-    if (by === 'price-desc') return (b.p || 0) - (a.p || 0);
-    if (by === 'price-asc') return (a.p || 0) - (b.p || 0);
-    const da = a.d || '0000', db = b.d || '0000';
-    return by === 'date-asc' ? da.localeCompare(db) : db.localeCompare(da);
-  });
+}
+
+/* ── 分段：一段一個標題，段內按發售日新→舊 ─────────────── */
+function groupsOf(list) {
+  const g = new Map();
+  const put = (k, label, it) => {
+    if (!g.has(k)) g.set(k, { k, label, items: [] });
+    g.get(k).items.push(it);
+  };
+  for (const it of list) {
+    if (UI.group === 'ch') it.ch.forEach(c => put('ch:' + c, CHARS[c]?.n || c, it));
+    else if (UI.group === 'ca') put('ca:' + it.ca, CATS[it.ca] || it.ca, it);
+    else if (UI.group === 'rg') put('rg:' + (it.rg || 'jp'), REGIONS[it.rg] || REGIONS.jp, it);
+    else if (UI.group === 'place') put('pl:' + (it.pl || 'x'), it.pl || '冇指定地點', it);
+    else if (UI.group === 'month') {
+      const m = (it.d || '').slice(0, 7);
+      put('m:' + (m || 'x'), m ? m.replace('-', ' 年 ') + ' 月' : '發售日未定', it);
+    } else put('se:' + it.se, SERIES[it.se] || it.se, it);
+  }
+  const out = [...g.values()];
+  for (const s of out) {
+    s.items.sort((a, b) => (b.d || '').localeCompare(a.d || ''));
+    s.newest = s.items[0]?.d || '';
+    s.own = s.items.filter(i => st(i.id) === 1).length;
+  }
+  // 段與段之間：最新嗰件排前
+  out.sort((a, b) => b.newest.localeCompare(a.newest) || b.items.length - a.items.length);
   return out;
 }
 
@@ -617,6 +669,8 @@ function card(it) {
       </div>
       <div class="flex flex-wrap gap-[4px]">
         ${it.ch.slice(0, 2).map(c2 => `<span class="chip ch">${esc(CHARS[c2]?.n || c2)}</span>`).join('')}
+        ${it.rg && it.rg !== 'jp' ? `<span class="chip rg">${esc(REGIONS[it.rg] || it.rg)}</span>` : ''}
+        ${it.pl ? `<span class="chip rg">${esc(it.pl)}</span>` : ''}
         <span class="chip se">${esc(SERIES[it.se] || it.se)}</span>
         <span class="chip ca">${esc(CATS[it.ca] || it.ca)}</span>
       </div>
@@ -637,19 +691,22 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
 /* ── 主畫面 ───────────────────────────────────────────── */
-const PAGE = 120;
-let shown = PAGE;
+const SEC_PAGE = 60;          // 每段先畫咁多件，餘下撳「再顯示」
+let io = null;
 
-function refresh(keepPage) {
-  if (!keepPage) shown = PAGE;
+function refresh() {
   const list = filtered();
-  const grid = $('#grid');
-  grid.className = 'grid gap-3 ' + (UI.cols === 3 ? 'grid-3' : 'grid-4');
-  grid.replaceChildren(...list.slice(0, shown).map(card));
+  const host = $('#sections');
+  host.replaceChildren();
+  if (io) io.disconnect();
+  io = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); fillSection(e.target); }
+  }, { rootMargin: '500px 0px' });
+
+  for (const g of groupsOf(list)) host.appendChild(sectionEl(g));
+
   $('#empty').classList.toggle('hidden', list.length > 0 || !CATALOG.length);
   $('#blank').classList.toggle('hidden', CATALOG.length > 0);
-  $('#more').classList.toggle('hidden', list.length <= shown);
-  $('#moreCount').textContent = Math.max(0, list.length - shown);
 
   const own = list.filter(i => st(i.id) === 1).length;
   $('#resultCount').textContent = list.length;
@@ -670,43 +727,50 @@ function refresh(keepPage) {
   }
   rb.appendChild(fr);
 
-  $('#col3').className = 'px-3 py-[6px] text-[.78rem] font-bold ' + (UI.cols === 3 ? 'bg-gold text-ink' : 'text-dim');
-  $('#col4').className = 'px-3 py-[6px] text-[.78rem] font-bold ' + (UI.cols === 4 ? 'bg-gold text-ink' : 'text-dim');
-
   renderLogs(); renderStats(); renderQuota();
 }
 
-/* ── 篩選列 ───────────────────────────────────────────── */
-function buildFilters() {
-  const mk = (host, items, active, toggle) => {
-    host.replaceChildren(...items.map(([val, label, extra]) => {
-      const b = document.createElement('button');
-      b.className = 'tag'; b.type = 'button';
-      b.textContent = label + (extra != null ? ` ${extra}` : '');
-      b.setAttribute('aria-pressed', active(val));
-      b.addEventListener('click', () => { toggle(val); buildFilters(); refresh(); });
-      return b;
-    }));
+function sectionEl(g) {
+  const sec = document.createElement('section');
+  sec._g = g; sec._shown = 0;
+  const closed = !!UI.closed[g.k];
+  const pct = g.items.length ? g.own / g.items.length * 100 : 0;
+  sec.innerHTML = `
+    <button class="sechead" aria-expanded="${!closed}">
+      <h2>${esc(g.label)}</h2>
+      <div class="bar"><span style="width:${pct.toFixed(1)}%"></span></div>
+      <span class="tally">${g.own}/${g.items.length}</span>
+      <span class="caret">${closed ? '▶' : '▼'}</span>
+    </button>
+    <div class="body${closed ? ' hidden' : ''}">
+      <div class="dexgrid" style="--cols:${UI.cols}"></div>
+      <button class="secmore hidden btn btn-ghost w-full mt-3"></button>
+    </div>`;
+
+  sec.querySelector('.sechead').onclick = () => {
+    const now = !UI.closed[g.k];
+    UI.closed[g.k] = now; write(K_UI, UI);
+    sec.querySelector('.body').classList.toggle('hidden', now);
+    sec.querySelector('.caret').textContent = now ? '▶' : '▼';
+    sec.querySelector('.sechead').setAttribute('aria-expanded', String(!now));
+    if (!now && !sec._shown) fillSection(sec);
   };
+  sec.querySelector('.secmore').onclick = () => fillSection(sec);
 
-  mk($('#fStatus'),
-    [['all', '全部'], ['own', '已入手'], ['miss', '未入手'], ['want', '想要'],
-     ['dup', '有重複'], ['new', '新登場']],
-    v => F.status === v, v => F.status = v);
+  if (!closed) io.observe(sec);
+  return sec;
+}
 
-  mk($('#fType'), [['all', '全部'], ['g', '周邊商品'], ['k', '一番賞 / くじ']],
-    v => F.type === v, v => F.type = v);
-
-  const count = (key, val) => CATALOG.filter(i => key === 'ch' ? i.ch.includes(val) : i[key] === val).length;
-  const used = (key, dict) => Object.keys(dict).filter(k => count(key, k) > 0)
-    .sort((a, b) => count(key, b) - count(key, a));
-
-  mk($('#fChar'), used('ch', CHARS).map(k => [k, CHARS[k].n, count('ch', k)]),
-    v => F.ch.has(v), v => F.ch.has(v) ? F.ch.delete(v) : F.ch.add(v));
-  mk($('#fSeries'), used('se', SERIES).map(k => [k, SERIES[k], count('se', k)]),
-    v => F.se.has(v), v => F.se.has(v) ? F.se.delete(v) : F.se.add(v));
-  mk($('#fCat'), used('ca', CATS).map(k => [k, CATS[k], count('ca', k)]),
-    v => F.ca.has(v), v => F.ca.has(v) ? F.ca.delete(v) : F.ca.add(v));
+function fillSection(sec) {
+  const g = sec._g;
+  const grid = sec.querySelector('.dexgrid');
+  const slice = g.items.slice(sec._shown, sec._shown + SEC_PAGE);
+  grid.append(...slice.map(card));
+  sec._shown += slice.length;
+  const left = g.items.length - sec._shown;
+  const more = sec.querySelector('.secmore');
+  more.classList.toggle('hidden', left <= 0);
+  more.textContent = `再顯示（仲有 ${left} 件）`;
 }
 
 /* ── 詳情 ─────────────────────────────────────────────── */
@@ -736,6 +800,8 @@ function openDetail(id) {
 
       <div class="flex flex-wrap gap-[5px]">
         ${it.ch.map(x => `<span class="chip ch">${esc(CHARS[x]?.n || x)}</span>`).join('')}
+        <span class="chip rg">${esc(REGIONS[it.rg] || REGIONS.jp)}</span>
+        ${it.pl ? `<span class="chip rg">${esc(it.pl)}</span>` : ''}
         <span class="chip se">${esc(SERIES[it.se] || it.se)}</span>
         <span class="chip ca">${esc(CATS[it.ca] || it.ca)}</span>
       </div>
@@ -743,6 +809,7 @@ function openDetail(id) {
       <dl class="grid grid-cols-2 gap-y-2 text-[.8rem]">
         <dt class="text-dim">發售日期</dt><dd>${it.d ? esc(it.d) : '—'}</dd>
         <dt class="text-dim">定價</dt><dd>${it.p ? '¥' + it.p.toLocaleString() : '—'}</dd>
+        <dt class="text-dim">發行地區</dt><dd>${esc(REGIONS[it.rg] || REGIONS.jp)}${it.pl ? '・' + esc(it.pl) : ''}</dd>
         <dt class="text-dim">編號</dt><dd class="font-mono text-[.72rem]">${esc(it.id)}</dd>
       </dl>
 
@@ -796,7 +863,7 @@ function openDetail(id) {
 
       <div class="flex gap-2 pt-1">
         ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener" class="btn btn-ghost flex-1 text-center">官網頁面</a>` : ''}
-        <button class="btn btn-ghost" id="editThis">編輯</button>
+        <button class="btn btn-ghost" id="editThis">${isCustom(it.id) ? '編輯 / 刪除' : '編輯'}</button>
       </div>
     </div>`;
 
@@ -948,8 +1015,13 @@ function openEditor(it) {
   $('#eType').value = it?.t || 'g'; $('#eDate').value = it?.d || '';
   $('#eKs').value = it?.ks || ''; $('#ePr').value = it?.pr || '';
   $('#ePrice').value = it?.p || ''; $('#eUrl').value = it?.url || ''; $('#eImg').value = it?.img || '';
-  fillSelect($('#eSe'), SERIES); fillSelect($('#eCa'), CATS);
+  fillSelect($('#eSe'), SERIES); fillSelect($('#eCa'), CATS); fillSelect($('#eRg'), REGIONS);
   $('#eSe').value = it?.se || 'standard'; $('#eCa').value = it?.ca || 'mascot';
+  $('#eRg').value = it?.rg || 'hk'; $('#ePl').value = it?.pl || '';
+
+  // 淨係自訂加入嘅先刪得，官網抓返嚟嗰啲刪咗都會再抓一次
+  const mine = isCustom(it?.id);
+  $('#editorDelete').classList.toggle('hidden', !mine);
 
   const picked = new Set(it?.ch || []);
   $('#eChar').replaceChildren(...Object.entries(CHARS).map(([k, v]) => {
@@ -976,6 +1048,7 @@ $('#editorSave').onclick = () => {
     ch: picked.length ? picked : ['mixed'],
     se: $('#eSe').value, ca: $('#eCa').value, t: $('#eType').value,
     d: $('#eDate').value, p: +$('#ePrice').value || 0,
+    rg: $('#eRg').value, pl: $('#ePl').value.trim(),
     img: $('#eImg').value.trim(), url: $('#eUrl').value.trim(),
     ks: $('#eKs').value.trim(), pr: $('#ePr').value.trim(),
   };
@@ -983,9 +1056,21 @@ $('#editorSave').onclick = () => {
   const i = custom.findIndex(x => x.id === item.id);
   if (i >= 0) custom[i] = item; else custom.push(item);
   write(K_CUSTOM, custom);
-  loadCatalog(); buildFilters(); refresh();
+  loadCatalog(); refresh();
   $('#editor').close(); toast(editingId ? '已更新' : '已加入圖鑑');
   editingId = null;
+};
+
+const isCustom = id => !!id && read(K_CUSTOM, []).some(x => x.id === id);
+
+$('#editorDelete').onclick = () => {
+  if (!editingId) return;
+  const it = CATALOG.find(x => x.id === editingId);
+  if (!confirm(`刪走「${it?.n || editingId}」？連埋佢嘅收藏狀態同打卡紀錄一齊冇。`)) return;
+  write(K_CUSTOM, read(K_CUSTOM, []).filter(x => x.id !== editingId));
+  delete COL[editingId]; write(K_COL, COL);
+  loadCatalog(); refresh();
+  $('#editor').close(); toast('刪咗'); editingId = null;
 };
 
 /* ── 匯入匯出 ─────────────────────────────────────────── */
@@ -1008,7 +1093,7 @@ $('#filePick').addEventListener('change', e => {
     } else {
       const arr = Array.isArray(data) ? data : data.items;
       if (!Array.isArray(arr) || !arr.length) return toast('呢個唔似係圖鑑檔');
-      write(K_CAT, arr); loadCatalog(); buildFilters();
+      write(K_CAT, arr); loadCatalog();
       toast(`圖鑑已更新：${arr.length} 件`);
     }
     refresh();
@@ -1113,19 +1198,30 @@ $('#syncNow').onclick = () => {
 const K_AUTOCAT = 'ck.autocat';
 let autoCat = read(K_AUTOCAT, true);
 
+async function grab(name) {
+  try {
+    const r = await fetch(name, { cache: 'no-cache' });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j) ? j : [];
+  } catch { return []; }
+}
+
 async function fetchCatalog() {
   if (!autoCat) return;
   try {
-    const r = await fetch('catalog.json', { cache: 'no-cache' });
-    if (!r.ok) return;
-    const arr = await r.json();
-    if (!Array.isArray(arr) || !arr.length) return;
+    // catalog.json = Action 抓返嚟嘅；manual.json = 你自己維護嗰份，
+    // 香港／台灣／大陸／韓國／澳門限定同一番賞放呢度，Action 唔會覆蓋。
+    const [auto, manual] = await Promise.all([grab('catalog.json'), grab('manual.json')]);
+    const seen = new Set(auto.map(x => x.id));
+    const arr = [...auto, ...manual.filter(x => !seen.has(x.id))];
+    if (!arr.length) return;
     const cur = read(K_CAT, null);
     const same = Array.isArray(cur) && cur.length === arr.length &&
       cur[0]?.id === arr[0]?.id && cur.at(-1)?.id === arr.at(-1)?.id;
     if (same) return;
     const before = cur?.length || 0;
-    write(K_CAT, arr); loadCatalog(); buildFilters(); refresh();
+    write(K_CAT, arr); loadCatalog(); refresh();
     toast(before ? `圖鑑更新咗：${before} → ${arr.length} 件` : `載入咗 ${arr.length} 件`);
   } catch { /* 本機用 file:// 開會 fetch 唔到，照用內建資料 */ }
 }
@@ -1180,23 +1276,35 @@ $('#q').addEventListener('input', e => {
   F.q = e.target.value;
   clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
 });
-$('#sort').addEventListener('change', e => { UI.sort = e.target.value; write(K_UI, UI); refresh(); });
-$('#col3').onclick = () => { UI.cols = 3; write(K_UI, UI); refresh(); };
-$('#col4').onclick = () => { UI.cols = 4; write(K_UI, UI); refresh(); };
+$('#groupBy').addEventListener('change', e => { UI.group = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
+$('#viewBy').addEventListener('change', e => { UI.view = e.target.value; write(K_UI, UI); refresh(); });
+$('#cols').addEventListener('change', e => { UI.cols = +e.target.value; write(K_UI, UI); refresh(); });
+$('#foldAll').onclick = () => {
+  const anyOpen = $$('#sections .sechead').some(b => b.getAttribute('aria-expanded') === 'true');
+  UI.closed = {};
+  if (anyOpen) for (const g of groupsOf(filtered())) UI.closed[g.k] = true;
+  write(K_UI, UI); refresh();
+  $('#foldAll').textContent = anyOpen ? '全部打開' : '全部摺埋';
+};
 $('#clearFilters').onclick = () => {
-  F = { q: '', status: 'all', type: 'all', ch: new Set(), se: new Set(), ca: new Set() };
-  $('#q').value = ''; buildFilters(); refresh();
+  F.q = ''; UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
+  $('#q').value = ''; $('#viewBy').value = 'all'; $('#foldAll').textContent = '全部摺埋';
+  refresh();
 };
 $('#addItem').onclick = () => openEditor(null);
 $('#blankAdd').onclick = () => openEditor(null);
-$('#more').onclick = () => { shown += PAGE; refresh(true); };
 $('#expCollection').onclick = () => download(`chiikawa-collection-${new Date().toISOString().slice(0, 10)}.json`, COL);
 $('#impCollection').onclick = () => pickFile('collection');
 $('#expCatalog').onclick = () => download('catalog.json', CATALOG);
 $('#impCatalog').onclick = () => pickFile('catalog');
+$('#expManual').onclick = () => {
+  const mine = read(K_CUSTOM, []);
+  if (!mine.length) return toast('仲未有自訂項目');
+  download('manual.json', mine);
+};
 $('#resetCatalog').onclick = () => {
   if (!confirm('還原成內建圖鑑？你匯入嘅官網資料會冇咗，收藏紀錄照樣保留。')) return;
-  localStorage.removeItem(K_CAT); loadCatalog(); buildFilters(); refresh(); toast('已還原內建圖鑑');
+  localStorage.removeItem(K_CAT); loadCatalog(); refresh(); toast('已還原內建圖鑑');
 };
 $('#wipe').onclick = () => {
   if (!confirm('刪走全部收藏狀態同打卡紀錄？冇得返轉頭。')) return;
@@ -1209,13 +1317,13 @@ $$('.tabbtn').forEach(b => b.onclick = () => {
 });
 $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#detail').close(); });
 
-$('#sort').value = UI.sort;
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
 applyTheme(localStorage.getItem('ck.theme') || 'auto');
 applyZoom(curZoom());
 
-loadCatalog(); buildFilters(); refresh(); syncStatus();
+$('#groupBy').value = UI.group; $('#viewBy').value = UI.view; $('#cols').value = UI.cols;
+loadCatalog(); refresh(); syncStatus();
 fetchCatalog();
 if (SY.auto && SY.url) doSync(true);
 
