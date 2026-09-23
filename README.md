@@ -7,6 +7,7 @@
 你個 repo/
 ├─ index.html              整個 app（single file）
 ├─ catalog.json            圖鑑資料（Action 自動更新，第一次要自己行一次）
+├─ img/                    官網圖片嘅本地備份（320px，Action 自動加新嘅）
 ├─ scrape-chiikawa.mjs     爬官網嘅 script
 ├─ Code.gs                 貼落 Google Apps Script（同步用）
 └─ .github/workflows/
@@ -46,7 +47,7 @@ git add catalog.json && git commit -m "圖鑑初版" && git push
 Node 18 以上，唔使裝 package。全站幾千件，行落去大概十幾二十分鐘
 （每個請求之間有 400ms 間隔，唔好撳得官網太密）。
 
-之後 Action 每星期一香港時間 04:00 自己行一次，有新嘢先 commit。
+之後 Action **每兩日 香港時間 04:00** 自己行一次，有新嘢先 commit。
 想即刻行就去 repo 嘅 **Actions** 分頁 →「更新圖鑑」→ Run workflow。
 
 Action 會用 `--prev` 接上舊檔，所以每件嘢都記住「幾時首次見到」。
@@ -55,9 +56,31 @@ Action 會用 `--prev` 接上舊檔，所以每件嘢都記住「幾時首次見
 個網開嗰陣會自動 fetch `catalog.json`，有更新會自己換，唔使你手動匯入。
 （想關就去「資料」分頁熄咗「每次開頁檢查」。）
 
+### 圖片會自己備份落 repo
+
+官網 CDN 支援 `?width=`，所以爬蟲直接攞 320px 細版存落 `img/<編號>.jpg`，
+一齊 commit 上去。官網將來落架、換相、甚至成個 CDN 路徑變咗，你都仲睇到。
+
+個網載圖嘅次序係：`img/` 本地備份 → 官網原圖 → 角色色塊。三層都冇先會灰晒。
+
+已經有嘅唔會再下載，所以第一次之後每次 Action 只加新嘢。
+大約 3000 件，每張 15–25KB，頭一次差唔多 60MB。嫌大就用 `--imgw 200` 再行一次
+（約 30MB），或者 `--no-images` 淨係記官網網址。
+
 **抓唔到嘅嘢**：ちいかわくじ 官網（online-kuji.chiikawamarket.jp）係 JavaScript
-渲染，冇公開 JSON，爬唔到。一番賞賞品要喺圖鑑頁用「＋ 自訂加入」手動加，
-揀類型「一番賞 / くじ」就會出賞別欄。
+渲染，冇公開 JSON，爬唔到。所以圖鑑入面淨係會有 Chiikawa Market 嘅周邊；
+一番賞要喺圖鑑頁用「＋ 自訂加入」手動加，揀類型「一番賞 / くじ」就會出賞別欄。
+
+---
+
+## 外觀
+
+右上角三粒掣：`－` `＋` 係成個 app 放大縮細（0.8 至 1.5 倍，記住上次揀嘅），
+第三粒係主題 —— 撳一下循環 跟系統 ◐ → 白雪 ☀ → 黑夜 ☾。手指捏大縮細照樣用得。
+
+角色、系列、類別嘅中文名全部喺 `index.html` 最上面嗰三個字典度
+（`CHARS` / `SERIES` / `CATS`）。覺得邊個譯名唔順口就直接改，
+篩選掣同標籤會跟住變。商品名本身係官網原文，冇譯。
 
 ---
 

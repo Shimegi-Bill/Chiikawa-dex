@@ -2,26 +2,33 @@
 <html lang="zh-Hant-HK">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <title>吉伊卡哇 周邊圖鑑</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  /* 喺畫面畫出嚟之前就定好主題，唔會閃一下白／黑 */
+  (function () {
+    var t = localStorage.getItem('ck.theme') || 'auto';
+    var dark = t === 'dark' || (t === 'auto' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    document.documentElement.dataset.pref = t;
+    var z = parseFloat(localStorage.getItem('ck.zoom')) || 1;
+    document.documentElement.style.setProperty('--zoom', z);
+  })();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
 tailwind.config = {
   theme: {
     extend: {
       colors: {
-        ink:   '#1B1622',
-        ink2:  '#241D2E',
-        ink3:  '#2F2740',
-        paper: '#F5EFE2',
-        dim:   '#8C81A0',
-        gold:  '#E8B84B',
-        rose:  '#E68DA0',
-        mint:  '#7FD3BE',
-        sky:   '#8FB8E8',
+        ink:'var(--ink)', ink2:'var(--ink2)', ink3:'var(--ink3)',
+        paper:'var(--paper)', dim:'var(--dim)',
+        gold:'var(--gold)', rose:'var(--rose)', mint:'var(--mint)', sky:'var(--sky)',
       },
       fontFamily: {
         round: ['"Zen Maru Gothic"','"Noto Sans TC"','system-ui','sans-serif'],
@@ -32,117 +39,146 @@ tailwind.config = {
 }
 </script>
 <style>
+  /* ── 主題 ──────────────────────────────────────────── */
+  :root[data-theme="dark"]{
+    --ink:#1B1622; --ink2:#241D2E; --ink3:#352B47;
+    --paper:#F5EFE2; --dim:#8C81A0;
+    --gold:#E8B84B; --rose:#E68DA0; --mint:#7FD3BE; --sky:#8FB8E8;
+    --slot:#1F1929; --slotOwn:#2A2136; --edge:#3A3048; --edgeHi:#4A3D60;
+    --sealInk:#1B1622; --shadow:rgba(0,0,0,.45); --veil:rgba(12,9,17,.82);
+    --track:#302740; color-scheme:dark;
+  }
+  :root[data-theme="light"]{
+    --ink:#FAF6EC; --ink2:#FFFFFF; --ink3:#E6DCC8;
+    --paper:#2C2438; --dim:#7A7188;
+    --gold:#B07C1E; --rose:#C4546F; --mint:#2E8F76; --sky:#3E72AE;
+    --slot:#F2EBDC; --slotOwn:#FFF8E6; --edge:#DED3BE; --edgeHi:#C3B394;
+    --sealInk:#FFFFFF; --shadow:rgba(90,70,40,.18); --veil:rgba(60,48,30,.45);
+    --track:#E6DCC8; color-scheme:light;
+  }
+
+  /* ── 可放大縮細：所有尺寸都係 rem，改根字級就整體縮放 ── */
+  html{ font-size: calc(16px * var(--zoom, 1)); }
+
   :root{
     box-sizing:border-box;
     padding-top:env(safe-area-inset-top,0px);
     padding-bottom:env(safe-area-inset-bottom,0px);
-    color-scheme:dark;
   }
   *,*::before,*::after{box-sizing:inherit}
   html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 4rem)}
-  body{background:#1B1622;color:#F5EFE2;font-family:'Noto Sans TC','Zen Maru Gothic',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  ::selection{background:#E8B84B;color:#1B1622}
-  :focus-visible{outline:2px solid #E8B84B;outline-offset:2px;border-radius:4px}
+  body{background:var(--ink);color:var(--paper);
+    font-family:'Noto Sans TC','Zen Maru Gothic',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--gold);color:var(--sealInk)}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+  .topbar{background:var(--ink);opacity:.98;backdrop-filter:blur(8px)}
 
-  /* ── 進度絲帶：每格一件，着咗＝已入手 ───────────────── */
+  /* ── 進度絲帶 ──────────────────────────────────────── */
   .ribbon{display:flex;flex-wrap:wrap;gap:2px;align-content:flex-start}
-  .ribbon i{width:7px;height:7px;border-radius:1.5px;background:#3A3048;display:block}
-  .ribbon i.on{background:#E8B84B}
-  .ribbon i.want{background:#5C4A6B}
+  .ribbon i{width:.44rem;height:.44rem;border-radius:1.5px;background:var(--edge);display:block}
+  .ribbon i.on{background:var(--gold)}
+  .ribbon i.want{background:var(--rose);opacity:.6}
 
-  /* ── 圖鑑格 ──────────────────────────────────────── */
-  .slot{
-    position:relative;border-radius:14px;overflow:hidden;
-    background:#241D2E;border:1px solid #352B47;
-    transition:border-color .18s ease, background .18s ease;
-    display:flex;flex-direction:column;text-align:left;width:100%;
-  }
-  .slot:hover{border-color:#4A3D60}
-  .slot .shot{position:relative;aspect-ratio:1/1;background:#1F1929;overflow:hidden}
-  .slot .shot img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .3s ease,opacity .3s ease}
+  /* ── 圖鑑格 ────────────────────────────────────────── */
+  .slot{position:relative;border-radius:.875rem;overflow:hidden;
+    background:var(--ink2);border:1px solid var(--ink3);
+    transition:border-color .18s ease,background .18s ease;
+    display:flex;flex-direction:column;text-align:left;width:100%}
+  .slot:hover{border-color:var(--edgeHi)}
+  .slot .shot{position:relative;aspect-ratio:1/1;background:var(--slot);overflow:hidden}
+  .slot .shot img{width:100%;height:100%;object-fit:cover;display:block;
+    transition:filter .3s ease,opacity .3s ease}
 
-  /* 未入手 → 灰 */
-  .slot[data-own="0"] .shot img{filter:grayscale(1) contrast(.82) brightness(.72);opacity:.62}
-  .slot[data-own="0"]{border-style:dashed;border-color:#3A3048}
-  .slot[data-own="0"] .meta{opacity:.62}
-  /* 已入手 → 彩色 + 金邊 */
-  .slot[data-own="1"]{border-color:#E8B84B;border-style:solid;background:#2A2136}
+  .slot[data-own="0"] .shot img{filter:grayscale(1) contrast(.85) brightness(.85);opacity:.55}
+  :root[data-theme="dark"] .slot[data-own="0"] .shot img{filter:grayscale(1) contrast(.82) brightness(.72);opacity:.62}
+  .slot[data-own="0"]{border-style:dashed;border-color:var(--edge)}
+  .slot[data-own="0"] .meta{opacity:.6}
+  .slot[data-own="1"]{border-color:var(--gold);border-style:solid;background:var(--slotOwn)}
   .slot[data-own="1"] .shot img{filter:none;opacity:1}
-  /* 想要 */
-  .slot[data-own="2"]{border-color:#E68DA0;border-style:solid}
-  .slot[data-own="2"] .shot img{filter:grayscale(.55) brightness(.85);opacity:.85}
+  .slot[data-own="2"]{border-color:var(--rose);border-style:solid}
+  .slot[data-own="2"] .shot img{filter:grayscale(.55);opacity:.85}
 
-  /* 無圖時嘅替代圖案（published / 離線都睇到） */
-  .slot .fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;
-    background:radial-gradient(circle at 50% 38%, var(--c1) 0%, var(--c2) 100%);}
+  .slot .fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    flex-direction:column;gap:.375rem;background:radial-gradient(circle at 50% 38%,var(--c1) 0%,var(--c2) 100%)}
   .slot.noimg .fallback{display:flex}
-  .slot .fallback b{font-family:'Zen Maru Gothic',sans-serif;font-size:2.4rem;font-weight:900;color:rgba(27,22,34,.72);line-height:1}
-  .slot .fallback span{font-size:.62rem;letter-spacing:.06em;color:rgba(27,22,34,.6)}
-  .slot[data-own="0"].noimg .fallback{filter:grayscale(1) brightness(.6)}
+  .slot .fallback b{font-family:'Zen Maru Gothic',sans-serif;font-size:2.4rem;font-weight:900;
+    color:rgba(40,30,20,.66);line-height:1}
+  .slot .fallback span{font-size:.62rem;letter-spacing:.06em;color:rgba(40,30,20,.55)}
+  .slot[data-own="0"].noimg .fallback{filter:grayscale(1) brightness(.88)}
 
-  /* 入手封印 */
-  .seal{position:absolute;top:8px;right:8px;z-index:2;width:30px;height:30px;border-radius:50%;
-    display:grid;place-items:center;font-size:.85rem;background:#E8B84B;color:#1B1622;
-    box-shadow:0 2px 10px rgba(0,0,0,.45);font-weight:700}
-  .seal.want{background:#E68DA0}
-  .seal.dup{background:#7FD3BE}
-  @media (prefers-reduced-motion:no-preference){
-    .seal{animation:pop .28s cubic-bezier(.2,1.5,.4,1)}
-  }
+  .seal{position:absolute;top:.5rem;right:.5rem;z-index:2;width:1.875rem;height:1.875rem;border-radius:50%;
+    display:grid;place-items:center;font-size:.85rem;background:var(--gold);color:var(--sealInk);
+    box-shadow:0 2px 10px var(--shadow);font-weight:700}
+  .seal.want{background:var(--rose)}
+  .seal.dup{background:var(--mint)}
+  @media (prefers-reduced-motion:no-preference){.seal{animation:pop .28s cubic-bezier(.2,1.5,.4,1)}}
   @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 
-  .qty{position:absolute;top:8px;left:8px;z-index:2;font-size:.66rem;padding:2px 7px;border-radius:99px;
-    background:rgba(27,22,34,.85);border:1px solid #E8B84B;color:#E8B84B;font-weight:700}
-  .kujibadge{position:absolute;bottom:8px;left:8px;z-index:2;font-size:.64rem;padding:2px 7px;border-radius:4px;
-    background:rgba(27,22,34,.88);border:1px solid #8FB8E8;color:#8FB8E8;font-weight:700}
-  .photomark{position:absolute;bottom:8px;right:8px;z-index:2;font-size:.7rem;padding:2px 6px;border-radius:5px;background:rgba(27,22,34,.85);color:#F5EFE2}
+  .qty{font-size:.66rem;padding:.125rem .44rem;border-radius:99px;
+    background:var(--ink);border:1px solid var(--gold);color:var(--gold);font-weight:700}
+  .kujibadge{position:absolute;bottom:.5rem;left:.5rem;z-index:2;font-size:.64rem;padding:.125rem .44rem;
+    border-radius:4px;background:var(--ink);border:1px solid var(--sky);color:var(--sky);font-weight:700}
+  .photomark{position:absolute;bottom:.5rem;right:.5rem;z-index:2;font-size:.7rem;padding:.125rem .375rem;
+    border-radius:5px;background:var(--ink);color:var(--paper)}
 
-  .chip{font-size:.66rem;padding:1px 7px;border-radius:99px;border:1px solid #3F3453;color:#B4A8C8;white-space:nowrap}
-  .chip.ch{border-color:#5E4A6E;color:#E0B9D6}
-  .chip.se{border-color:#3F5570;color:#9FC3E8}
-  .chip.ca{border-color:#4E5C42;color:#B4D39A}
+  .chip{font-size:.66rem;padding:.06rem .44rem;border-radius:99px;border:1px solid var(--ink3);
+    color:var(--dim);white-space:nowrap}
+  .chip.ch{color:var(--rose)}
+  .chip.se{color:var(--sky)}
+  .chip.ca{color:var(--mint)}
 
-  /* 篩選掣 */
-  .tag{font-size:.75rem;padding:4px 11px;border-radius:99px;border:1px solid #3A3048;background:#241D2E;color:#B4A8C8;transition:.14s}
-  .tag:hover{border-color:#5B4B72;color:#F5EFE2}
-  .tag[aria-pressed="true"]{background:#E8B84B;border-color:#E8B84B;color:#1B1622;font-weight:700}
+  .tag{font-size:.75rem;padding:.25rem .7rem;border-radius:99px;border:1px solid var(--ink3);
+    background:var(--ink2);color:var(--dim);transition:.14s}
+  .tag:hover{border-color:var(--edgeHi);color:var(--paper)}
+  .tag[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--sealInk);font-weight:700}
 
-  .field{background:#1F1929;border:1px solid #3A3048;border-radius:9px;padding:7px 11px;color:#F5EFE2;font-size:.85rem;width:100%}
-  .field:focus{border-color:#E8B84B;outline:none}
-  .btn{border-radius:9px;padding:7px 14px;font-size:.82rem;font-weight:700;transition:.14s}
-  .btn-gold{background:#E8B84B;color:#1B1622}
-  .btn-gold:hover{background:#F3C85F}
-  .btn-ghost{background:#241D2E;border:1px solid #3A3048;color:#D6CCE6}
-  .btn-ghost:hover{border-color:#5B4B72}
+  .field{background:var(--slot);border:1px solid var(--ink3);border-radius:.56rem;padding:.44rem .7rem;
+    color:var(--paper);font-size:.85rem;width:100%}
+  .field:focus{border-color:var(--gold);outline:none}
+  .btn{border-radius:.56rem;padding:.44rem .875rem;font-size:.82rem;font-weight:700;transition:.14s}
+  .btn-gold{background:var(--gold);color:var(--sealInk)}
+  .btn-gold:hover{filter:brightness(1.08)}
+  .btn-ghost{background:var(--ink2);border:1px solid var(--ink3);color:var(--paper)}
+  .btn-ghost:hover{border-color:var(--edgeHi)}
 
-  dialog::backdrop{background:rgba(12,9,17,.82)}
+  dialog::backdrop{background:var(--veil)}
   dialog{border:none;padding:0;background:transparent;max-width:100%}
 
-  .bar{height:7px;border-radius:99px;background:#302740;overflow:hidden}
-  .bar>span{display:block;height:100%;background:#E8B84B;border-radius:99px}
+  .bar{height:.44rem;border-radius:99px;background:var(--track);overflow:hidden}
+  .bar>span{display:block;height:100%;background:var(--gold);border-radius:99px}
 
   .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
   .grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}
   @media (max-width:900px){.grid-3,.grid-4{grid-template-columns:repeat(3,minmax(0,1fr))}}
   @media (max-width:640px){.grid-3,.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
-  .tabbtn{padding:9px 4px;border-bottom:2px solid transparent;color:#8C81A0;font-weight:700;font-size:.9rem}
-  .tabbtn[aria-selected="true"]{color:#F5EFE2;border-bottom-color:#E8B84B}
+  .tabbtn{padding:.56rem .25rem;border-bottom:2px solid transparent;color:var(--dim);font-weight:700;font-size:.9rem}
+  .tabbtn[aria-selected="true"]{color:var(--paper);border-bottom-color:var(--gold)}
   .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .scroll-x::-webkit-scrollbar{height:6px}
-  .scroll-x::-webkit-scrollbar-thumb{background:#3A3048;border-radius:99px}
+  .scroll-x::-webkit-scrollbar-thumb{background:var(--edge);border-radius:99px}
+
+  .iconbtn{width:1.9rem;height:1.9rem;border-radius:.44rem;border:1px solid var(--ink3);
+    background:var(--ink2);color:var(--dim);display:grid;place-items:center;font-size:.8rem;font-weight:700}
+  .iconbtn:hover{border-color:var(--edgeHi);color:var(--paper)}
+  .iconbtn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--sealInk)}
 </style>
 </head>
 <body class="font-body">
 
 <!-- ══ 頂部：進度絲帶 ══════════════════════════════════════ -->
-<header class="sticky top-0 z-30 bg-ink/95 backdrop-blur border-b border-ink3"
+<header class="topbar sticky top-0 z-30 border-b border-ink3"
         style="padding-top:env(safe-area-inset-top,0px)">
   <div class="max-w-[1180px] mx-auto px-4 pt-3 pb-2">
     <div class="flex items-start gap-4 flex-wrap">
       <div class="flex-1 min-w-[190px]">
         <h1 class="font-round font-black text-[1.4rem] leading-none tracking-tight">吉伊卡哇 周邊圖鑑</h1>
         <p class="text-dim text-[.72rem] mt-1">ちいかわ Collection Log</p>
+      </div>
+      <div class="flex items-center gap-1 order-3 sm:order-none">
+        <button class="iconbtn" id="zOut" title="縮細" aria-label="縮細">－</button>
+        <button class="iconbtn" id="zIn" title="放大" aria-label="放大">＋</button>
+        <button class="iconbtn ml-1" id="themeBtn" title="白雪／黑夜" aria-label="轉主題"></button>
       </div>
       <div class="flex items-center gap-4">
         <div class="text-right leading-none">
@@ -219,6 +255,16 @@ tailwind.config = {
   <div id="grid" class="grid grid-4 gap-3"></div>
   <button id="more" class="hidden btn btn-ghost w-full mt-4">再顯示（仲有 <span id="moreCount"></span> 件）</button>
   <p id="empty" class="hidden text-center text-dim py-16 text-sm">冇符合條件嘅項目。試下清除篩選，或者自訂加入一件。</p>
+  <div id="blank" class="hidden text-center py-20 px-6">
+    <p class="font-round font-bold text-lg mb-2">圖鑑仲係空</p>
+    <p class="text-dim text-sm leading-relaxed max-w-[26rem] mx-auto">
+      圖鑑資料由 GitHub Action 抓官網再寫入 <code class="text-mint">catalog.json</code>。
+      第一次要自己行一次 <code class="text-mint">node scrape-chiikawa.mjs</code>，
+      commit 埋上去之後開頁就會自動載入。<br><br>
+      一番賞要用下面個掣手動加。
+    </p>
+    <button class="btn btn-gold mt-5" id="blankAdd">＋ 自訂加入一件</button>
+  </div>
 </section>
 
 <!-- ══ 入手紀錄 ═══════════════════════════════════════════ -->
@@ -362,161 +408,87 @@ tailwind.config = {
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden bg-gold text-ink font-bold text-sm px-4 py-2 rounded-lg shadow-lg"></div>
 
 <script>
-/* ── 標籤字典 ──────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   標籤字典 —— 全部用香港慣用叫法
+   覺得邊個名唔啱就喺呢度改，成個 app 同篩選都會跟住變。
+   n = 顯示名　ja = 日文原名（搜尋用）　c1/c2 = 無圖時嘅底色　g = 代表字
+════════════════════════════════════════════════════════════ */
 const CHARS = {
-  chiikawa:  { n:'吉伊卡哇', ja:'ちいかわ',      c1:'#FFF3D6', c2:'#E8C98A', g:'ち' },
-  hachiware: { n:'小八',     ja:'ハチワレ',      c1:'#D8F0FF', c2:'#8FC4E8', g:'ハ' },
-  usagi:     { n:'兔兔',     ja:'うさぎ',        c1:'#FFF0C9', c2:'#EFC65C', g:'う' },
-  momonga:   { n:'小桃',     ja:'モモンガ',      c1:'#FFE3EE', c2:'#F0A5C4', g:'モ' },
-  kurimanju: { n:'栗子饅頭', ja:'くりまんじゅう',c1:'#F5DEC2', c2:'#C89563', g:'く' },
-  rakko:     { n:'海獺',     ja:'ラッコ',        c1:'#E6D9CC', c2:'#A88B73', g:'ラ' },
-  shisa:     { n:'獅獅',     ja:'シーサー',      c1:'#FFE0D0', c2:'#E89A76', g:'シ' },
-  furuhonya: { n:'舊書店',   ja:'古本屋',        c1:'#DCD6EE', c2:'#9A8EC4', g:'古' },
-  anoko:     { n:'那孩子',   ja:'あのこ',        c1:'#E4EEDC', c2:'#9DBA8C', g:'あ' },
-  dekatsuyo: { n:'大強',     ja:'でかつよ',      c1:'#E8E2D6', c2:'#B0A48E', g:'で' },
-  ode:       { n:'小歐',     ja:'オデ',          c1:'#F0E2D2', c2:'#C0A183', g:'オ' },
-  chimaera:  { n:'奇美拉',   ja:'キメラ',        c1:'#DDD2E8', c2:'#9484AF', g:'キ' },
-  yoroisan:  { n:'鎧甲先生', ja:'鎧さん',        c1:'#D9DEE6', c2:'#8A93A3', g:'鎧' },
-  beetle:    { n:'甲蟲',     ja:'カブトムシ',    c1:'#D6DCC8', c2:'#8B9470', g:'カ' },
-  goblin:    { n:'哥布林',   ja:'ゴブリン',      c1:'#D4E4DA', c2:'#84A895', g:'ゴ' },
-  star:      { n:'星星',     ja:'星',            c1:'#FFF6D2', c2:'#E5CE7A', g:'★' },
-  muchauman: { n:'無敵超人', ja:'むちゃうマン',  c1:'#FFDDD6', c2:'#DD8E7C', g:'む' },
-  siren:     { n:'塞壬',     ja:'セイレーン',    c1:'#D4E8F2', c2:'#7FADC2', g:'セ' },
-  shimajiro: { n:'島次郎',   ja:'シマジロウ',    c1:'#E8E0D0', c2:'#B09E7E', g:'島' },
-  bird:      { n:'「鳥」',   ja:'「鳥」',        c1:'#E0E6EE', c2:'#93A0B2', g:'鳥' },
-  mixed:     { n:'合集',     ja:'いろいろ',      c1:'#EADFEE', c2:'#A98FB4', g:'＋' },
+  chiikawa:  { n:'吉伊卡哇',   ja:'ちいかわ',       c1:'#FFF3D6', c2:'#E8C98A', g:'吉' },
+  hachiware: { n:'小八',       ja:'ハチワレ',       c1:'#D8F0FF', c2:'#8FC4E8', g:'八' },
+  usagi:     { n:'烏薩奇',     ja:'うさぎ',         c1:'#FFF0C9', c2:'#EFC65C', g:'烏' },
+  momonga:   { n:'小桃',       ja:'モモンガ',       c1:'#FFE3EE', c2:'#F0A5C4', g:'桃' },
+  kurimanju: { n:'栗子饅頭',   ja:'くりまんじゅう', c1:'#F5DEC2', c2:'#C89563', g:'栗' },
+  rakko:     { n:'海獺',       ja:'ラッコ',         c1:'#E6D9CC', c2:'#A88B73', g:'獺' },
+  shisa:     { n:'獅獅',       ja:'シーサー',       c1:'#FFE0D0', c2:'#E89A76', g:'獅' },
+  furuhonya: { n:'舊書店',     ja:'古本屋',         c1:'#DCD6EE', c2:'#9A8EC4', g:'書' },
+  anoko:     { n:'嗰個細路',   ja:'あのこ',         c1:'#E4EEDC', c2:'#9DBA8C', g:'嗰' },
+  dekatsuyo: { n:'大又強',     ja:'でかつよ',       c1:'#E8E2D6', c2:'#B0A48E', g:'強' },
+  ode:       { n:'歐帝',       ja:'オデ',           c1:'#F0E2D2', c2:'#C0A183', g:'歐' },
+  chimaera:  { n:'奇美拉',     ja:'キメラ',         c1:'#DDD2E8', c2:'#9484AF', g:'奇' },
+  yoroisan:  { n:'鎧甲先生',   ja:'鎧さん',         c1:'#D9DEE6', c2:'#8A93A3', g:'鎧' },
+  beetle:    { n:'甲蟲',       ja:'カブトムシ',     c1:'#D6DCC8', c2:'#8B9470', g:'甲' },
+  goblin:    { n:'哥布林',     ja:'ゴブリン',       c1:'#D4E4DA', c2:'#84A895', g:'哥' },
+  star:      { n:'星星',       ja:'星',             c1:'#FFF6D2', c2:'#E5CE7A', g:'星' },
+  muchauman: { n:'好味超人',   ja:'むちゃうマン',   c1:'#FFDDD6', c2:'#DD8E7C', g:'味' },
+  siren:     { n:'塞壬',       ja:'セイレーン',     c1:'#D4E8F2', c2:'#7FADC2', g:'塞' },
+  shimajiro: { n:'島次郎',     ja:'シマジロウ',     c1:'#E8E0D0', c2:'#B09E7E', g:'島' },
+  bird:      { n:'「鳥」',     ja:'「鳥」',         c1:'#E0E6EE', c2:'#93A0B2', g:'鳥' },
+  mixed:     { n:'大合集',     ja:'いろいろ',       c1:'#EADFEE', c2:'#A98FB4', g:'合' },
 };
 
 const SERIES = {
-  standard:   '定番',
-  park:       '吉伊卡哇公園',
-  movie:      '電影 吉伊卡哇',
-  suppaiman:  '×酸梅超人',
-  bakery:     '吉伊卡哇麵包店',
-  magical:    '魔法吉伊卡哇',
-  tenshi:     '天使♡惡魔',
-  sanrio:     '×三麗鷗',
-  aquarium:   '吉伊卡哇水族館',
-  hanten:     '吉伊卡哇飯店',
-  restaurant: '吉伊卡哇餐廳',
-  tokyomiyage:'東京手信',
-  baby:       'Chiikawa Baby',
-  sushi:      '吉伊卡哇壽司',
-  ramenbuta:  '吉伊卡哇拉麵豚',
-  parallel:   '平行世界！？',
-  yuenchi:    '歡樂遊樂園',
-  land:       '吉伊卡哇樂園',
+  standard:    '基本款',
+  park:        '吉伊卡哇公園',
+  movie:       '吉伊卡哇電影版',
+  suppaiman:   '×酸梅超人',
+  bakery:      '吉伊卡哇麵包店',
+  magical:     '魔法吉伊卡哇',
+  tenshi:      '天使♡惡魔',
+  sanrio:      '×Sanrio',
+  aquarium:    '吉伊卡哇水族館',
+  hanten:      '吉伊卡哇飯店',
+  restaurant:  '吉伊卡哇餐廳',
+  tokyomiyage: '東京手信',
+  baby:        'Chiikawa Baby',
+  sushi:       '吉伊卡哇壽司',
+  ramenbuta:   '吉伊卡哇拉麵豚',
+  parallel:    '平行世界！？',
+  yuenchi:     '開心遊樂場',
+  land:        '吉伊卡哇樂園',
   shisamatsuri:'獅獅祭',
-  mlb:        '×MLB TOKYO SERIES',
-  giants:     '×讀賣巨人',
-  hankyu:     '×阪急電車',
-  odekake:    '出街好開心！',
-  kuji:       'くじ・一番賞',
+  mlb:         '×MLB 東京系列賽',
+  giants:      '×讀賣巨人',
+  hankyu:      '×阪急電車',
+  odekake:     '出街好開心！',
+  kuji:        '一番賞・抽獎',
 };
 
 const CATS = {
-  plush:    '公仔',
-  mascot:   '吊飾公仔',
-  keyring:  '鎖匙扣',
-  badge:    '徽章',
-  acrylic:  '亞加力',
-  figure:   'figure',
-  stationery:'文具',
-  apparel:  '服飾',
-  hat:      '帽',
-  bag:      '袋・散子包',
-  towel:    '毛巾',
-  kitchen:  '廚房用品',
-  phone:    '手機周邊',
-  interior: '家居・寢具',
-  food:     '食品',
-  toy:      '玩具・砌圖',
-  luckybag: '福袋',
-  other:    '其他',
+  plush:      '公仔',
+  mascot:     '掛飾公仔',
+  keyring:    '鎖匙扣',
+  badge:      '襟章',
+  acrylic:    '亞加力企牌',
+  figure:     '模型',
+  stationery: '文具',
+  apparel:    'T恤・衫褲',
+  hat:        '帽',
+  bag:        '袋・散紙包',
+  towel:      '毛巾',
+  kitchen:    '杯碟餐具',
+  phone:      '手機周邊',
+  interior:   '攬枕・床品',
+  food:       '零食',
+  toy:        '玩具・砌圖',
+  luckybag:   '福袋',
+  other:      '其他',
 };
 
-/* ── 種子圖鑑 ──────────────────────────────────────────────
-   由 chiikawamarket.jp 官方商店抓返嚟（2026-09）。
-   發售日期係按官網圖片上載時間推算嘅近似值 —— 行埋 scrape-chiikawa.mjs
-   匯入 catalog.json 之後，就會換成官網真正嘅上架日。
-   img / url 直接指向官網，所以要有網先睇到相；睇唔到就會 fallback 做角色色塊。
-─────────────────────────────────────────────────────────── */
-const CDN = 'https://chiikawamarket.jp/cdn/shop/files/';
-const SHOP = 'https://chiikawamarket.jp/products/';
-
-const SEED = [
-  // ── 吉伊卡哇公園 ─────────────────────────────────────
-  ['4571609406860','吉伊卡哇公園 迷你吊飾鎖匙扣（幽靈兔兔）','ちいかわパーク ミニマスコットキーリング（おばけうさぎ）',['usagi'],'park','keyring','2026-09-09',1540,'4571609406860_1.jpg?v=1788943159'],
-  ['4571609406853','吉伊卡哇公園 迷你吊飾鎖匙扣（幽靈小八）','ちいかわパーク ミニマスコットキーリング（おばけハチワレ）',['hachiware'],'park','keyring','2026-09-09',1540,'4571609406853_1.jpg?v=1788943182'],
-  ['4571609406846','吉伊卡哇公園 迷你吊飾鎖匙扣（幽靈吉伊卡哇）','ちいかわパーク ミニマスコットキーリング（おばけちいかわ）',['chiikawa'],'park','keyring','2026-09-09',1540,'4571609406846_1.jpg?v=1788943203'],
-  ['4571609406839','吉伊卡哇公園 南瓜兔兔公仔 S','ちいかわパーク かぼちゃうさぎ ぬいぐるみ S',['usagi'],'park','plush','2026-09-09',2420,'4571609406839_1.jpg?v=1788943246'],
-  ['4571609398752','吉伊卡哇公園 迷你吊飾鎖匙扣（拉麵鎧甲）','ちいかわパーク ミニマスコットキーリング（ラーメンの鎧）',['yoroisan'],'park','keyring','2026-08-31',1430,'4571609398752_1.jpg?v=1788138413'],
-  ['4571609398745','吉伊卡哇公園 迷你吊飾鎖匙扣（斜孭袋鎧甲）','ちいかわパーク ミニマスコットキーリング（ポシェットの鎧）',['yoroisan'],'park','keyring','2026-08-31',1430,'4571609398745_1.jpg?v=1788138447'],
-  ['4571609398738','吉伊卡哇公園 迷你吊飾鎖匙扣（哥布林）','ちいかわパーク ミニマスコットキーリング（ゴブリン）',['goblin'],'park','keyring','2026-08-31',1430,'4571609398738_1.jpg?v=1788138479'],
-  ['4571609398721','吉伊卡哇公園 迷你吊飾鎖匙扣（小歐）','ちいかわパーク ミニマスコットキーリング（オデ）',['ode'],'park','keyring','2026-08-31',1430,'4571609398721_1.jpg?v=1788138512'],
-  ['4571609398714','吉伊卡哇公園 迷你吊飾鎖匙扣（似樣嘅嘢・兔兔）','ちいかわパーク ミニマスコットキーリング（似たようなもの・うさぎ）',['usagi'],'park','keyring','2026-08-31',1430,'4571609398714_1.jpg?v=1788138544'],
-  ['4571609398707','吉伊卡哇公園 迷你吊飾鎖匙扣（似樣嘅嘢・小八）','ちいかわパーク ミニマスコットキーリング（似たようなもの・ハチワレ）',['hachiware'],'park','keyring','2026-08-31',1430,'4571609398707_1.jpg?v=1788138579'],
-  ['4571609398691','吉伊卡哇公園 迷你吊飾鎖匙扣（似樣嘅嘢・吉伊卡哇）','ちいかわパーク ミニマスコットキーリング（似たようなもの・ちいかわ）',['chiikawa'],'park','keyring','2026-08-31',1430,'4571609398691_1.jpg?v=1788138613'],
-
-  // ── 電影 吉伊卡哇 ────────────────────────────────────
-  ['4571609403357','電影版 桌上掛掛吊飾公仔（島次郎）','映画ちいかわ デスクにちょこん マスコット（シマジロウ）',['shimajiro'],'movie','mascot','2026-08-28',2420,'4571609403357_1_pre.jpg?v=1787894534'],
-  ['4571609403340','電影版 桌上掛掛吊飾公仔（塞壬）','映画ちいかわ デスクにちょこん マスコット（セイレーン）',['siren'],'movie','mascot','2026-08-28',2420,'4571609403340_1_pre.jpg?v=1787895656'],
-  ['4571609404422','電影版 耳仔拉長 吉伊卡哇吊飾公仔','映画ちいかわ 耳がのびたちいかわ マスコット',['chiikawa'],'movie','mascot','2026-08-28',1870,'4571609404422_1_pre.jpg?v=1787895741'],
-  ['4571609404415','電影版 暈船 吉伊卡哇吊飾公仔','映画ちいかわ 船酔いちいかわ マスコット',['chiikawa'],'movie','mascot','2026-08-28',1870,'4571609404415_1_pre.jpg?v=1787895818'],
-  ['4571609404439','電影版 吊飾公仔（「鳥」）','映画ちいかわ マスコット（「鳥」）',['bird'],'movie','mascot','2026-08-28',1650,'4571609404439_1_pre.jpg?v=1787895862'],
-  ['4571609405900','電影版 塞壬公仔 L','映画ちいかわ セイレーン ぬいぐるみ L',['siren'],'movie','plush','2026-07-06',6600,'36c93af051bf2c0f34b6cf96c59b5407.jpg?v=1783326078'],
-
-  // ── 定番 ─────────────────────────────────────────────
-  ['4571609403258','「太好飲喇！水…」吊飾公仔（兔兔）','「うますぎ！水…」マスコット（うさぎ）',['usagi'],'standard','mascot','2026-09-02',1650,'4571609403258_1_fc2a4297-3935-47c3-963b-3c736b576be3.jpg?v=1788354018'],
-  ['4571609403241','「太好飲喇！水…」吊飾公仔（小八）','「うますぎ！水…」マスコット（ハチワレ）',['hachiware'],'standard','mascot','2026-09-02',1650,'4571609403241_1_ede1670c-8ebe-4c7f-8ae6-a7dfaf9c4e66.jpg?v=1788353995'],
-  ['4571609403234','「太好飲喇！水…」吊飾公仔（吉伊卡哇）','「うますぎ！水…」マスコット（ちいかわ）',['chiikawa'],'standard','mascot','2026-09-02',1650,'4571609403234_1_6ddcb63f-e42a-4a89-9be0-46be3efd593e.jpg?v=1788353974'],
-  ['4582769908941','會講嘢 兔兔公仔（連睡衣套裝）','おしゃべり うさぎ ぬいぐるみ パジャマセット',['usagi'],'standard','plush','2026-08-06',7700,'4582769908941_1_444e17ba-d13d-473a-8f28-2dae254a67d8.jpg?v=1785984749'],
-  ['4582769903243','會講嘢 小八公仔（連睡衣套裝）','おしゃべり ハチワレ ぬいぐるみ パジャマセット',['hachiware'],'standard','plush','2026-08-06',7700,'4582769903243_1.jpg?v=1785984712'],
-  ['4582769903229','會講嘢 吉伊卡哇公仔（連睡衣套裝）','おしゃべり ちいかわ ぬいぐるみ パジャマセット',['chiikawa'],'standard','plush','2026-08-06',7700,'4582769903229_1.jpg?v=1785984687'],
-  ['4571609403227','吊飾公仔（甲蟲）','マスコット（カブトムシ）',['beetle'],'standard','mascot','2026-07-16',1320,'4571609403227_1.jpg?v=1784178711'],
-  ['4571609397311','宿醉吊飾公仔（兔兔）','二日酔いマスコット（うさぎ）',['usagi'],'standard','mascot','2026-06-16',1650,'4571609397311_1.jpg?v=1781595571'],
-  ['4571609397304','宿醉吊飾公仔（小八）','二日酔いマスコット（ハチワレ）',['hachiware'],'standard','mascot','2026-06-16',1650,'4571609397304_1.jpg?v=1781595557'],
-  ['4571609413875','2027 福袋（羊年）','ちいかわ 福袋 2027（未年）',['mixed'],'standard','luckybag','2026-08-18',11000,'4571609413875_0A.jpg?v=1787017223'],
-
-  // ── ×酸梅超人 ────────────────────────────────────────
-  ['4571609403838','×酸梅超人 吊飾公仔（兔兔）','ちいかわ×スッパイマン マスコットぬいぐるみ（うさぎ）',['usagi'],'suppaiman','mascot','2026-07-22',2200,'4571609403838_1_62187a28-6638-456f-9fdc-3c633fa8f6ce.jpg?v=1784709716'],
-  ['4571609403821','×酸梅超人 吊飾公仔（小八）','ちいかわ×スッパイマン マスコットぬいぐるみ（ハチワレ）',['hachiware'],'suppaiman','mascot','2026-07-22',2200,'4571609403821_1_e17f4f16-03cb-476b-84e2-0db839547d9f.jpg?v=1784709696'],
-  ['4571609403814','×酸梅超人 吊飾公仔（吉伊卡哇）','ちいかわ×スッパイマン マスコットぬいぐるみ（ちいかわ）',['chiikawa'],'suppaiman','mascot','2026-07-22',2200,'4571609403814_1_25c0f1c7-0c13-4fd3-8c10-2ea0dd9e2a00.jpg?v=1784709677'],
-
-  // ── 麵包店 ───────────────────────────────────────────
-  ['4571609397465','麵包店店員吊飾公仔（舊書店）','ちいかわベーカリー スタッフマスコット（古本屋）',['furuhonya'],'bakery','mascot','2026-06-22',2200,'4571609397465_1_445d157c-80b4-4f21-83a6-07e4f4490d37.jpg?v=1782103201'],
-  ['4571609397458','麵包店店員吊飾公仔（小桃）','ちいかわベーカリー スタッフマスコット（モモンガ）',['momonga'],'bakery','mascot','2026-06-22',2200,'4571609397458_1_1cffc170-4e61-4148-80d6-467bcad60bb4.jpg?v=1782103177'],
-].map(a => ({
-  id:a[0], n:a[1], ja:a[2], ch:a[3], se:a[4], ca:a[5], t:'g',
-  d:a[6], p:a[7], img:CDN+a[8]+'&width=480', url:SHOP+a[0]
-}));
-
-/* ── 一番賞 / くじ ────────────────────────────────────────
-   ちいかわくじ 官網係 JavaScript 渲染，爬唔到，所以呢度手動輸入。
-   加新賞品用圖鑑頁嘅「＋ 自訂加入」，揀「一番賞 / くじ」就會出賞別欄。
-─────────────────────────────────────────────────────────── */
-const KUJI = [
-  ['k-ibk-a','一番賞 吉伊卡哇','A賞','吉伊卡哇公仔（約28cm）',['chiikawa'],'plush',''],
-  ['k-ibk-b','一番賞 吉伊卡哇','B賞','小八公仔（約28cm）',['hachiware'],'plush',''],
-  ['k-ibk-c','一番賞 吉伊卡哇','C賞','兔兔公仔（約28cm）',['usagi'],'plush',''],
-  ['k-ibk-d','一番賞 吉伊卡哇','','丼盛食器（約15cm）',['mixed'],'kitchen',''],
-  ['k-ibk-e','一番賞 吉伊卡哇','','玻璃杯（全5種）',['mixed'],'kitchen',''],
-  ['k-ibk-w','一番賞 吉伊卡哇','Double Chance','吉伊卡哇公仔（約28cm・限30個）',['chiikawa'],'plush',''],
-  ['k-cdk-b','吉伊卡哇だらけくじ','B賞','救出！可拆除公仔（朱古力）',['chiikawa'],'plush',''],
-  ['k-cdk-m','吉伊卡哇だらけくじ','','磁石貼實！好friend公仔（吉伊卡哇 × 甲蟲）',['chiikawa','beetle'],'plush',''],
-  ['k-cdk-p','吉伊卡哇だらけくじ','','嗶嗶啵啵 吊飾',['chiikawa'],'mascot',''],
-  ['k-cdk-e','吉伊卡哇だらけくじ','','眼藥水 吊飾',['chiikawa'],'mascot',''],
-  ['k-crp-e','吉伊卡哇 可麗餅くじ','E賞','似可麗餅嘅毛巾',['mixed'],'towel',''],
-  ['k-bby-m','Chiikawa Baby 公仔くじ','','磁石貼實！同熊仔好friend嘅吉伊卡哇公仔',['chiikawa'],'plush',''],
-  ['k-hdk-a','小八だらけくじ','A賞','小八公仔',['hachiware'],'plush',''],
-  ['k-udk-a','兔兔だらけくじ','A賞','兔兔公仔',['usagi'],'plush','2024-10-15'],
-  ['k-kmj-a','栗子饅頭だらけくじ','A賞','栗子饅頭公仔',['kurimanju'],'plush','2026-09-24'],
-].map(a => ({
-  id:a[0], n:a[3], ja:'', ch:a[4], se:'kuji', ca:a[5], t:'k',
-  d:a[6]||'', p:0, img:'', url:'', ks:a[1], pr:a[2]
-}));
-
-const BUILTIN = [...SEED, ...KUJI];
+/* 圖鑑內容全部由 GitHub Action 抓官網寫入 catalog.json，開頁自動載入。
+   本機用 file:// 開就要喺「資料」分頁手動匯入。
+   一番賞要用「＋ 自訂加入」手動加（ちいかわくじ 官網係 SPA，爬唔到）。 */
+const BUILTIN = [];
 
 </script>
 <script>
@@ -634,7 +606,7 @@ function card(it) {
       ${seal}${kb}${pm}
       <div class="absolute top-2 left-2 z-[2] flex flex-col gap-1 items-start">${nb}${qbadge}</div>
       <div class="fallback"><b>${esc(main.g)}</b><span>${esc(CATS[it.ca] || '')}</span></div>
-      ${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}
+      ${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${it.imgr && !c.ph ? ` data-alt="${esc(it.imgr)}"` : ''}>` : ''}
     </div>
     <div class="meta p-[10px] flex flex-col gap-[6px] flex-1">
       <div class="font-round font-bold text-[.8rem] leading-[1.35] line-clamp-3">${esc(it.n)}</div>
@@ -651,7 +623,12 @@ function card(it) {
     </div>`;
 
   const img = el.querySelector('img');
-  if (img) img.addEventListener('error', () => { el.classList.add('noimg'); img.remove(); });
+  if (img) img.addEventListener('error', () => {
+    // 本地備份揾唔到 → 試官網原圖 → 都冇就出角色色塊
+    const alt = img.dataset.alt;
+    if (alt) { img.removeAttribute('data-alt'); img.src = alt; return; }
+    el.classList.add('noimg'); img.remove();
+  });
   el.addEventListener('click', () => openDetail(it.id));
   return el;
 }
@@ -669,7 +646,8 @@ function refresh(keepPage) {
   const grid = $('#grid');
   grid.className = 'grid gap-3 ' + (UI.cols === 3 ? 'grid-3' : 'grid-4');
   grid.replaceChildren(...list.slice(0, shown).map(card));
-  $('#empty').classList.toggle('hidden', list.length > 0);
+  $('#empty').classList.toggle('hidden', list.length > 0 || !CATALOG.length);
+  $('#blank').classList.toggle('hidden', CATALOG.length > 0);
   $('#more').classList.toggle('hidden', list.length <= shown);
   $('#moreCount').textContent = Math.max(0, list.length - shown);
 
@@ -823,7 +801,10 @@ function openDetail(id) {
     </div>`;
 
   const dImg = $('#dImg');
-  if (dImg) dImg.addEventListener('error', () => dImg.remove());
+  if (dImg) dImg.addEventListener('error', function () {
+    if (!c.ph && it.imgr && dImg.src !== it.imgr) { dImg.src = it.imgr; return; }
+    dImg.remove();
+  });
 
   $('#dClose').onclick = () => $('#detail').close();
   $$('#detailBody [data-set]').forEach(b => b.onclick = () => { setState(id, +b.dataset.set); openDetail(id); });
@@ -1150,6 +1131,49 @@ async function fetchCatalog() {
 }
 $('#autoCat').onchange = e => { autoCat = e.target.checked; write(K_AUTOCAT, autoCat); if (autoCat) fetchCatalog(); };
 
+
+/* ══ 白雪 / 黑夜 / 跟系統 ═══════════════════════════════════ */
+const THEMES = [['auto', '◐', '跟系統'], ['light', '☀', '白雪'], ['dark', '☾', '黑夜']];
+function applyTheme(pref) {
+  const dark = pref === 'dark' ||
+    (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const r = document.documentElement;
+  r.dataset.theme = dark ? 'dark' : 'light';
+  r.dataset.pref = pref;
+  localStorage.setItem('ck.theme', pref);
+  const t = THEMES.find(x => x[0] === pref);
+  $('#themeBtn').textContent = t[1];
+  $('#themeBtn').title = t[2] + '（撳一下轉）';
+}
+$('#themeBtn').onclick = () => {
+  const i = THEMES.findIndex(x => x[0] === (document.documentElement.dataset.pref || 'auto'));
+  applyTheme(THEMES[(i + 1) % THEMES.length][0]);
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if ((document.documentElement.dataset.pref || 'auto') === 'auto') applyTheme('auto');
+});
+
+/* ══ 放大縮細 ══════════════════════════════════════════════
+   所有尺寸都係 rem，改根字級就成個 app 一齊縮放。
+   手指捏大縮細照樣用得（viewport 冇鎖）。 */
+const ZOOMS = [0.8, 0.9, 1, 1.15, 1.3, 1.5];
+function applyZoom(z) {
+  document.documentElement.style.setProperty('--zoom', z);
+  localStorage.setItem('ck.zoom', z);
+  $('#zOut').disabled = z <= ZOOMS[0];
+  $('#zIn').disabled = z >= ZOOMS.at(-1);
+  $('#zOut').style.opacity = z <= ZOOMS[0] ? .4 : 1;
+  $('#zIn').style.opacity = z >= ZOOMS.at(-1) ? .4 : 1;
+}
+const curZoom = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
+function stepZoom(d) {
+  const z = curZoom();
+  let i = ZOOMS.reduce((best, v, k) => Math.abs(v - z) < Math.abs(ZOOMS[best] - z) ? k : best, 0);
+  applyZoom(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + d))]);
+}
+$('#zIn').onclick = () => stepZoom(1);
+$('#zOut').onclick = () => stepZoom(-1);
+
 /* ── 接駁 ─────────────────────────────────────────────── */
 let qT;
 $('#q').addEventListener('input', e => {
@@ -1164,6 +1188,7 @@ $('#clearFilters').onclick = () => {
   $('#q').value = ''; buildFilters(); refresh();
 };
 $('#addItem').onclick = () => openEditor(null);
+$('#blankAdd').onclick = () => openEditor(null);
 $('#more').onclick = () => { shown += PAGE; refresh(true); };
 $('#expCollection').onclick = () => download(`chiikawa-collection-${new Date().toISOString().slice(0, 10)}.json`, COL);
 $('#impCollection').onclick = () => pickFile('collection');
@@ -1187,6 +1212,8 @@ $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#
 $('#sort').value = UI.sort;
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
+applyTheme(localStorage.getItem('ck.theme') || 'auto');
+applyZoom(curZoom());
 
 loadCatalog(); buildFilters(); refresh(); syncStatus();
 fetchCatalog();
