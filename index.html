@@ -2,7 +2,7 @@
 <html lang="zh-Hant-HK">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>吉伊卡哇 周邊圖鑑</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -67,6 +67,9 @@ tailwind.config = {
   }
   *,*::before,*::after{box-sizing:inherit}
   html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 4rem)}
+  /* 淨係上下滾。touch-action:pan-y 順便擋埋兩指放大同雙擊放大 ——
+     iOS Safari 唔理 user-scalable=no，要靠呢句同下面嗰段 gesture 事件。 */
+  html,body{overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y;max-width:100%}
   body{background:var(--ink);color:var(--paper);
     font-family:'Noto Sans TC','Zen Maru Gothic',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   ::selection{background:var(--gold);color:var(--sealInk)}
@@ -172,6 +175,59 @@ tailwind.config = {
   .sechead .caret{color:var(--dim);font-size:.7rem;width:.8rem;text-align:center}
   .sechead:hover h2{color:var(--gold)}
 
+  /* ── 自訂下拉（唔用 <select>，iOS 唔會彈原生 picker）── */
+  .dd{position:relative;display:inline-block}
+  .dd-btn{display:flex;align-items:center;gap:.4rem;width:100%;
+    background:var(--ink2);border:1px solid var(--ink3);border-radius:.56rem;
+    padding:.44rem .6rem;color:var(--paper);font-size:.8rem;font-weight:500;
+    white-space:nowrap;transition:.14s}
+  .dd-btn:hover{border-color:var(--edgeHi)}
+  .dd-btn[aria-expanded="true"]{border-color:var(--gold)}
+  .dd-btn.on{background:var(--gold);border-color:var(--gold);color:var(--sealInk);font-weight:700}
+  .dd-btn .caret{font-size:.6rem;opacity:.7;margin-left:auto}
+  .dd-menu{position:absolute;top:calc(100% + .3rem);left:0;z-index:60;
+    min-width:100%;max-width:min(18rem,calc(100vw - 2rem));max-height:min(24rem,60vh);
+    overflow-y:auto;overscroll-behavior:contain;
+    background:var(--ink2);border:1px solid var(--ink3);border-radius:.6rem;
+    box-shadow:0 .5rem 1.5rem var(--shadow);padding:.25rem}
+  .dd-menu.right{left:auto;right:0}
+  .dd-opt{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;
+    padding:.4rem .55rem;border-radius:.4rem;font-size:.8rem;color:var(--paper);white-space:nowrap}
+  .dd-opt:hover{background:var(--slot)}
+  .dd-opt[aria-selected="true"]{background:var(--gold);color:var(--sealInk);font-weight:700}
+  .dd-opt .n{margin-left:auto;font-size:.7rem;opacity:.6;font-variant-numeric:tabular-nums}
+  .ddgrid{display:grid;gap:.5rem;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
+    padding:.75rem;background:var(--slot);border:1px solid var(--ink3);border-radius:.75rem}
+  /* 角色小頭像：用圖鑑入面該角色嘅實物相，載唔到就退做色底＋首字 */
+  .ava{position:relative;width:1.5rem;height:1.5rem;border-radius:50%;overflow:hidden;
+    flex-shrink:0;display:grid;place-items:center;
+    background:radial-gradient(circle at 50% 38%,var(--c1),var(--c2))}
+  .ava b{font-family:'Zen Maru Gothic',sans-serif;font-size:.7rem;font-weight:900;
+    color:rgba(40,30,20,.7);line-height:1}
+  .ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .charbar button[aria-pressed="true"] .ava{box-shadow:0 0 0 1.5px var(--sealInk)}
+  .ava.all{background:var(--slot);border:1px dashed var(--edge)}
+  .ava.all b{color:var(--dim);font-size:.62rem}
+
+  .filtercount{display:inline-grid;place-items:center;min-width:1.1rem;height:1.1rem;
+    margin-left:.35rem;padding:0 .3rem;border-radius:99px;
+    background:var(--gold);color:var(--sealInk);font-size:.65rem;font-weight:700}
+
+  /* ── 角色橫列 ──────────────────────────────────── */
+  .charbar{display:flex;flex-wrap:wrap;gap:.4rem;padding-bottom:.35rem}
+  .charbar button{display:flex;align-items:center;gap:.35rem;flex-shrink:0;
+    padding:.25rem .65rem .25rem .25rem;border-radius:99px;border:1px solid var(--ink3);
+    background:var(--ink2);color:var(--paper);font-size:.78rem;font-weight:500;
+    white-space:nowrap;transition:.14s}
+  .charbar button:hover{border-color:var(--edgeHi)}
+  .charbar button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);
+    color:var(--sealInk);font-weight:700}
+  .charbar button .n{font-size:.65rem;opacity:.55;font-variant-numeric:tabular-nums}
+  .charbar button[aria-pressed="true"] .n{opacity:.75}
+  /* 每隻角色一抹自己嘅顏色，掃過去認得快啲 */
+  .charbar button i{width:.5rem;height:.5rem;border-radius:50%;align-self:center;
+    background:var(--dot,var(--dim));flex-shrink:0}
+
   .iconbtn{width:1.9rem;height:1.9rem;border-radius:.44rem;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);display:grid;place-items:center;font-size:.8rem;font-weight:700}
   .iconbtn:hover{border-color:var(--edgeHi);color:var(--paper)}
@@ -220,44 +276,35 @@ tailwind.config = {
 <!-- ══ 圖鑑 ═══════════════════════════════════════════════ -->
 <section id="tab-dex" class="pt-4">
 
-  <div class="flex gap-2 flex-wrap items-center mb-2">
-    <input id="q" class="field flex-1 min-w-[11rem]" placeholder="搵名、角色、系列、地點…" autocomplete="off">
-    <select id="cols" class="field w-auto" aria-label="每行欄數">
-      <option value="3">3 欄</option><option value="4">4 欄</option>
-      <option value="5">5 欄</option><option value="6">6 欄</option>
-      <option value="7">7 欄</option><option value="8">8 欄</option>
-    </select>
+  <!-- 第一行：搵嘢 ＋ 排序 ＋ 篩選開關 -->
+  <div class="flex gap-2 items-center mb-3">
+    <input id="q" class="field flex-1 min-w-0" placeholder="搵名、角色、系列、地點…" autocomplete="off">
+    <div id="ddSort" class="dd shrink-0"></div>
+    <button id="moreFilters" class="btn btn-ghost shrink-0 whitespace-nowrap" aria-expanded="false">
+      篩選<span id="filterCount" class="filtercount hidden"></span>
+    </button>
   </div>
 
-  <div class="flex gap-2 flex-wrap items-center mb-2">
-    <select id="fChar" class="field w-auto" aria-label="角色"></select>
-    <select id="fMain" class="field w-auto" aria-label="大類"></select>
-    <select id="fSub"  class="field w-auto" aria-label="細類"></select>
-    <select id="fTheme" class="field w-auto" aria-label="系列"></select>
-    <select id="fRegion" class="field w-auto" aria-label="地區"></select>
-    <select id="viewBy" class="field w-auto" aria-label="收藏狀態">
-      <option value="all">全部狀態</option>
-      <option value="miss">淨係未入手</option>
-      <option value="own">淨係已入手</option>
-      <option value="want">想要</option>
-      <option value="dup">有重複</option>
-      <option value="new">新登場</option>
-    </select>
-    <select id="groupBy" class="field w-auto" aria-label="點樣分段">
-      <option value="theme">按系列分段</option>
-      <option value="main">按大類分段</option>
-      <option value="sub">按細類分段</option>
-      <option value="char">按角色分段</option>
-      <option value="region">按地區分段</option>
-      <option value="place">按限定地點分段</option>
-      <option value="month">按發售月份分段</option>
-    </select>
+  <!-- 角色：打橫一行，主角排先 -->
+  <div class="charbar mb-3" id="charBar" role="group" aria-label="角色"></div>
+
+  <!-- 其餘篩選：收埋，撳「篩選」先展開 -->
+  <div id="filterPanel" class="hidden mb-3">
+    <div class="ddgrid">
+      <div id="ddMain"></div>
+      <div id="ddSub"></div>
+      <div id="ddTheme"></div>
+      <div id="ddRegion"></div>
+      <div id="ddView"></div>
+      <div id="ddGroup"></div>
+      <div id="ddCols"></div>
+    </div>
   </div>
 
-  <div class="flex items-center justify-between mb-5 text-[.76rem]">
+  <div class="flex items-center justify-between gap-2 mb-5 text-[.76rem] flex-wrap">
     <div class="text-dim"><span id="resultCount">0</span> 件　<span id="resultOwned" class="text-gold"></span></div>
     <div class="flex gap-2">
-      <button class="btn btn-ghost" id="foldAll">全部摺埋</button>
+      <button class="btn btn-ghost hidden" id="foldAll">全部摺埋</button>
       <button class="btn btn-ghost" id="clearFilters">重設</button>
       <button class="btn btn-gold" id="addItem">＋ 自訂加入</button>
     </div>
@@ -408,7 +455,10 @@ tailwind.config = {
       <input id="eJa" class="field mt-1" placeholder="日文原名（可以唔填）"></label>
     <div class="grid grid-cols-2 gap-3">
       <label class="block"><span class="text-dim text-[.72rem]">類型</span>
-        <select id="eType" class="field mt-1"><option value="g">周邊商品</option><option value="k">一番賞 / くじ</option></select></label>
+        <div id="eType" class="flex gap-2 mt-1" data-v="g">
+          <button type="button" class="tag flex-1" data-t="g">周邊商品</button>
+          <button type="button" class="tag flex-1" data-t="k">一番賞 / くじ</button>
+        </div></label>
       <label class="block"><span class="text-dim text-[.72rem]">發售日期</span>
         <input id="eDate" type="date" class="field mt-1"></label>
     </div>
@@ -485,6 +535,17 @@ const PALETTE = {
   '人魚':       ['#CFE6E4', '#75AAA8'],
   '島次郎':     ['#E8E0D0', '#B09E7E'],
 };
+
+/* 角色排位 —— 主角行先，之後按戲份／出場先後。
+   唔喺呢個名單嘅（官網出新角色）自動排喺後面，按件數多少。 */
+const CHAR_ORDER = [
+  '吉伊卡哇', '小八', '兔兔',              // 三主角
+  '飛鼠', '栗子饅頭', '師父', '獅獅',        // 常駐
+  '古本木', '那個細路', '大又強', '歐帝',
+  '鎧甲先生', '甲蟲', '哥布林', '奇美拉',
+  '星星', '好味超人',
+  '賽蓮', '人魚', '島次郎', '「鳥」',        // 電影版
+];
 
 /* 大類排位（冇列到嘅排最後，按件數） */
 const MAIN_ORDER = [
@@ -582,6 +643,68 @@ async function initI18n() {
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
+   自訂下拉
+   唔用 <select> —— iOS 會彈個原生 picker 上嚟，同成個介面唔夾，
+   亦都冇得顯示件數同自訂排序。
+════════════════════════════════════════════════════════════ */
+let openDD = null;
+
+function closeDD() {
+  if (!openDD) return;
+  openDD.menu.hidden = true;
+  openDD.btn.setAttribute('aria-expanded', 'false');
+  openDD = null;
+}
+document.addEventListener('click', e => { if (openDD && !openDD.root.contains(e.target)) closeDD(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDD(); });
+
+/* host: 放落邊　opts: [{v, label, n?}]　value: 揀緊邊個
+   prefix: 掣面前綴（例「排序：」）　onPick: 揀完做咩 */
+function dropdown(host, { opts, value, prefix = '', onPick, highlight = false }) {
+  const root = typeof host === 'string' ? $(host) : host;
+  root.className = 'dd';
+  const cur = opts.find(o => o.v === value) || opts[0];
+  const active = highlight && value !== opts[0].v;
+
+  root.innerHTML = `
+    <button class="dd-btn${active ? ' on' : ''}" aria-expanded="false" aria-haspopup="listbox">
+      <span>${esc(prefix)}${esc(cur?.label ?? '')}</span><span class="caret">▾</span>
+    </button>
+    <div class="dd-menu" role="listbox" hidden>
+      ${opts.map(o => `
+        <button class="dd-opt" role="option" data-v="${esc(o.v)}" aria-selected="${o.v === value}">
+          <span>${esc(o.label)}</span>${o.n != null ? `<span class="n">${o.n}</span>` : ''}
+        </button>`).join('')}
+    </div>`;
+
+  const btn = root.querySelector('.dd-btn');
+  const menu = root.querySelector('.dd-menu');
+
+  btn.onclick = e => {
+    e.stopPropagation();
+    const wasOpen = openDD?.root === root;
+    closeDD();
+    if (wasOpen) return;
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    openDD = { root, btn, menu };
+    // 貼住右邊嘅話向左開，唔好衝出畫面
+    menu.classList.remove('right');
+    if (menu.getBoundingClientRect().right > innerWidth - 8) menu.classList.add('right');
+    menu.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  };
+  menu.onclick = e => {
+    const opt = e.target.closest('.dd-opt');
+    if (!opt) return;
+    closeDD();
+    onPick(opt.dataset.v);
+  };
+  return root;
+}
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════
    吉伊卡哇 周邊圖鑑
    資料格式（catalog.json / manual.json 每一件）：
      id name name_ja character theme main_category sub_category
@@ -606,7 +729,7 @@ const write = (k, v, silent) => {
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-let CATALOG = [], OPTS = {};
+let CATALOG = [], OPTS = {}, TALLY = {};
 
 /* 成份圖鑑（近 9000 件、幾 MB）放記憶體，唔靠 localStorage ——
    localStorage 得 5MB，塞唔落就會靜靜雞掟 QuotaExceededError，
@@ -616,8 +739,11 @@ let CATALOG = [], OPTS = {};
 let MEM_CAT = null;
 let CAT_PERSISTED = true;
 let COL = read(K_COL, {});
-let UI = Object.assign({ cols: 4, group: 'theme', view: 'all', closed: {} }, read(K_UI, {}));
-UI.cols = Math.min(8, Math.max(3, +UI.cols || 4));
+const UI_DEFAULTS = { v: 2, cols: 3, group: 'none', sort: 'date-desc', view: 'all', closed: {} };
+let UI = Object.assign({}, UI_DEFAULTS, read(K_UI, {}));
+// 舊版存落嘅偏好係 4 欄＋按系列分段，重設一次做新 default
+if (UI.v !== UI_DEFAULTS.v) UI = Object.assign(UI, { v: 2, cols: 3, group: 'none', sort: 'date-desc' });
+UI.cols = Math.min(8, Math.max(3, +UI.cols || 3));
 let F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
 let editingId = null;
 
@@ -689,7 +815,7 @@ function loadCatalog() {
 function buildOptions() {
   const uniq = f => [...new Set(CATALOG.map(x => x[f]).filter(Boolean))];
   OPTS = {
-    char: [...new Set(CATALOG.flatMap(x => splitChars(x.character)))].sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+    char: [...new Set(CATALOG.flatMap(x => splitChars(x.character)))],
     main: uniq('main_category').sort((a, b) => {
       const i = MAIN_ORDER.indexOf(a), j = MAIN_ORDER.indexOf(b);
       return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || a.localeCompare(b, 'zh-Hant');
@@ -701,32 +827,27 @@ function buildOptions() {
 
   /* 一次過數晒，唔好逐個選項掃一次成個圖鑑 ——
      9000 件 × 120 個選項 ＝ 成百萬次比對，喺手機會頓。 */
-  const tally = { char: new Map(), main: new Map(), sub: new Map(), theme: new Map(), region: new Map() };
+  TALLY = { char: new Map(), main: new Map(), sub: new Map(), theme: new Map(), region: new Map() };
   const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
   for (const x of CATALOG) {
-    for (const c of splitChars(x.character)) bump(tally.char, c);
-    bump(tally.main, x.main_category); bump(tally.sub, x.sub_category);
-    bump(tally.theme, x.theme); bump(tally.region, x.region);
+    for (const c of splitChars(x.character)) bump(TALLY.char, c);
+    bump(TALLY.main, x.main_category); bump(TALLY.sub, x.sub_category);
+    bump(TALLY.theme, x.theme); bump(TALLY.region, x.region);
   }
-  const count = (f, v) => tally[f].get(v) || 0;
 
-  const fill = (sel, key, allLabel) => {
-    const el = $(sel), keep = F[key];
-    el.replaceChildren();
-    const a = document.createElement('option'); a.value = ''; a.textContent = allLabel;
-    el.appendChild(a);
-    for (const v of OPTS[key]) {
-      const o = document.createElement('option');
-      o.value = v; o.textContent = `${v}（${count(key, v)}）`;
-      el.appendChild(o);
-    }
-    el.value = OPTS[key].includes(keep) ? keep : (F[key] = '');
-  };
-  fill('#fChar', 'char', '所有角色');
-  fill('#fMain', 'main', '所有大類');
-  fill('#fSub', 'sub', '所有細類');
-  fill('#fTheme', 'theme', '所有系列');
-  fill('#fRegion', 'region', '所有地區');
+  // 角色：主角行先。名單以外嘅（官網新出）排後面，多嘢嗰個行先。
+  OPTS.char.sort((x, y) => {
+    const i = CHAR_ORDER.indexOf(x), j = CHAR_ORDER.indexOf(y);
+    if (i >= 0 || j >= 0) return (i < 0 ? 999 : i) - (j < 0 ? 999 : j);
+    return count('char', y) - count('char', x) || x.localeCompare(y, 'zh-Hant');
+  });
+
+  // 篩選緊嘅值如果喺新資料入面已經冇咗，就自動放返「全部」
+  for (const k of ['char', 'main', 'sub', 'theme', 'region'])
+    if (F[k] && !OPTS[k].includes(F[k])) F[k] = '';
+
+  buildAvatars();
+  renderControls();
 
   // 編輯器嘅輸入提示
   const dl = (id, arr) => $(id).replaceChildren(...arr.map(v => {
@@ -734,6 +855,109 @@ function buildOptions() {
   }));
   dl('#charList', OPTS.char); dl('#themeList', OPTS.theme);
   dl('#mainList', OPTS.main); dl('#subList', OPTS.sub); dl('#rgList', OPTS.region);
+}
+
+
+/* ══ 篩選控制項 ═══════════════════════════════════════════
+   全部自己畫：角色打橫攤開做 chip，其餘做自訂下拉。
+   唔用 <select> —— iOS 會彈原生轉盤，樣式控制唔到，
+   亦都冇得喺選項右邊顯示件數。
+═════════════════════════════════════════════════════════ */
+const VIEWS = [
+  ['all', '全部狀態'], ['miss', '未入手'], ['own', '已入手'],
+  ['want', '想要'], ['dup', '有重複'], ['new', '新登場'],
+];
+const GROUPS = [
+  ['none', '唔分段'], ['theme', '按系列'], ['main', '按大類'], ['sub', '按細類'],
+  ['char', '按角色'], ['region', '按地區'], ['place', '按地點'], ['month', '按月份'],
+];
+const cnt = (f, v) => TALLY[f]?.get(v) || 0;
+
+/* 角色小頭像：唔另外畫角色圖，直接由圖鑑揀一張該角色嘅實物相。
+   條件：淨係得佢一個角色（唔好揀合照）、有相；公仔／掛飾優先，
+   同一批入面揀最新出嗰件。揀唔到就退返色底加首字。 */
+let AVATARS = new Map();
+function buildAvatars() {
+  const pool = new Map();
+  for (const x of CATALOG) {
+    const cs = splitChars(x.character);
+    if (cs.length !== 1) continue;
+    const src = x.image || x.image_remote;
+    if (!src) continue;
+    const c = cs[0];
+    const good = /公仔|掛飾|玩偶|ぬいぐるみ|マスコット/.test(x.sub_category);
+    const cur = pool.get(c);
+    if (!cur || (good && !cur.good) ||
+        (good === cur.good && (x.release_date || '') > (cur.d || ''))) {
+      pool.set(c, { src, good, d: x.release_date || '' });
+    }
+  }
+  AVATARS = new Map([...pool].map(([c, v]) => [c, v.src]));
+}
+
+function renderControls() {
+  /* ── 角色：全部攤開，主角排先 ── */
+  const bar = $('#charBar');
+  const chip = (v, label, n, lead) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = lead ? 'lead' : '';
+    b.setAttribute('aria-pressed', String(F.char === v));
+    const [c1, c2] = colorOf(v);
+    const src = v ? AVATARS.get(v) : null;
+    const ava = v
+      ? `<span class="ava" style="--c1:${c1};--c2:${c2}"><b>${esc(v[0])}</b>${
+          src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}</span>`
+      : `<span class="ava all"><b>全</b></span>`;
+    b.innerHTML = `${ava}<span>${esc(label)}</span>${n != null ? `<em>${n}</em>` : ''}`;
+    const img = b.querySelector('.ava img');
+    if (img) img.addEventListener('error', () => img.remove());   // 相唔見咗就顯示返首字
+    b.onclick = () => {
+      F.char = F.char === v ? '' : v;      // 撳返同一個＝取消
+      UI.closed = {}; write(K_UI, UI); refresh();
+    };
+    return b;
+  };
+  bar.replaceChildren(
+    chip('', '全部', CATALOG.length),
+    ...(OPTS.char || []).map((c, i) => chip(c, c, cnt('char', c), i < 3)),
+  );
+
+  /* ── 其餘篩選：自訂下拉 ── */
+  const pick = (key) => (v) => { F[key] = v; UI.closed = {}; write(K_UI, UI); refresh(); };
+  const list = (key, allLabel) => [
+    { v: '', label: allLabel },
+    ...(OPTS[key] || []).map(v => ({ v, label: v, n: cnt(key, v) })),
+  ];
+  dropdown('#ddMain',   { opts: list('main', '所有大類'),   value: F.main,   onPick: pick('main'),   highlight: true });
+  dropdown('#ddSub',    { opts: list('sub', '所有細類'),    value: F.sub,    onPick: pick('sub'),    highlight: true });
+  dropdown('#ddTheme',  { opts: list('theme', '所有系列'),  value: F.theme,  onPick: pick('theme'),  highlight: true });
+  dropdown('#ddRegion', { opts: list('region', '所有地區'), value: F.region, onPick: pick('region'), highlight: true });
+
+  dropdown('#ddView', {
+    opts: VIEWS.map(([v, label]) => ({ v, label })), value: UI.view, highlight: true,
+    onPick: v => { UI.view = v; write(K_UI, UI); refresh(); },
+  });
+  dropdown('#ddGroup', {
+    opts: GROUPS.map(([v, label]) => ({ v, label })), value: UI.group, highlight: true,
+    onPick: v => { UI.group = v; UI.closed = {}; write(K_UI, UI); refresh(); },
+  });
+  dropdown('#ddCols', {
+    opts: [3, 4, 5, 6, 7, 8].map(n => ({ v: String(n), label: n + ' 欄' })), value: String(UI.cols),
+    onPick: v => { UI.cols = +v; write(K_UI, UI); refresh(); },
+  });
+  dropdown('#ddSort', {
+    opts: Object.entries(SORTS).map(([v, [label]]) => ({ v, label })), value: UI.sort,
+    prefix: '', onPick: v => { UI.sort = v; write(K_UI, UI); refresh(); },
+  });
+
+  /* ── 「篩選」掣上面嘅數字：而家開緊幾多個條件 ── */
+  const on = ['main', 'sub', 'theme', 'region'].filter(k => F[k]).length
+           + (UI.view !== 'all' ? 1 : 0);
+  const badge = $('#filterCount');
+  badge.textContent = on;
+  badge.classList.toggle('hidden', !on);
+  $('#foldAll').classList.toggle('hidden', UI.group === 'none');
 }
 
 /* ── 收藏狀態 ─────────────────────────────────────────── */
@@ -775,6 +999,18 @@ function filtered() {
   });
 }
 
+/* ── 排序 ─────────────────────────────────────────────── */
+const cmpStr = (x, y) => (x || '').localeCompare(y || '');
+const SORTS = {
+  'date-desc':  ['最新發售',   (a, b) => cmpStr(b.release_date, a.release_date)],
+  'date-asc':   ['最舊發售',   (a, b) => cmpStr(a.release_date, b.release_date)],
+  'seen-desc':  ['最近加入',   (a, b) => cmpStr(b.first_seen, a.first_seen)],
+  'name':       ['名稱',       (a, b) => a.name.localeCompare(b.name, 'zh-Hant')],
+  'price-desc': ['價錢高→低',  (a, b) => (b.price || 0) - (a.price || 0)],
+  'price-asc':  ['價錢低→高',  (a, b) => (a.price || 0) - (b.price || 0)],
+};
+const sortFn = () => (SORTS[UI.sort] || SORTS['date-desc'])[1];
+
 /* ── 分段 ─────────────────────────────────────────────── */
 const GROUP_FIELD = { theme: 'theme', main: 'main_category', sub: 'sub_category', region: 'region' };
 function groupsOf(list) {
@@ -783,6 +1019,12 @@ function groupsOf(list) {
     if (!g.has(k)) g.set(k, { k, label, items: [] });
     g.get(k).items.push(it);
   };
+  // 「唔分段」＝ 一個平鋪大 grid，冇標題
+  if (UI.group === 'none') {
+    const items = [...list].sort(sortFn());
+    return [{ k: 'all', label: '', flat: true, items, newest: '',
+              own: items.filter(i => st(i.id) === 1).length }];
+  }
   for (const it of list) {
     if (UI.group === 'char') {
       const cs = splitChars(it.character);
@@ -799,9 +1041,10 @@ function groupsOf(list) {
     }
   }
   const out = [...g.values()];
+  const by = sortFn();
   for (const s of out) {
-    s.items.sort((a, b) => (b.release_date || '').localeCompare(a.release_date || ''));
-    s.newest = s.items[0]?.release_date || '';
+    s.items.sort(by);
+    s.newest = s.items.reduce((m, x) => (x.release_date || '') > m ? x.release_date : m, '');
     s.own = s.items.filter(i => st(i.id) === 1).length;
   }
   if (UI.group === 'main') {
@@ -902,25 +1145,28 @@ function refresh() {
   }
   rb.appendChild(fr);
 
+  renderControls();
   renderLogs(); renderStats(); renderQuota();
 }
 
 function sectionEl(g) {
   const sec = document.createElement('section');
   sec._g = g; sec._shown = 0;
-  const closed = !!UI.closed[g.k];
+  const closed = !g.flat && !!UI.closed[g.k];
   const pct = g.items.length ? g.own / g.items.length * 100 : 0;
+  // 平鋪模式（唔分段）冇標題，直接出 grid
   sec.innerHTML = `
-    <button class="sechead" aria-expanded="${!closed}">
+    ${g.flat ? '' : `<button class="sechead" aria-expanded="${!closed}">
       <h2>${esc(g.label)}</h2>
       <div class="bar"><span style="width:${pct.toFixed(1)}%"></span></div>
       <span class="tally">${g.own}/${g.items.length}</span>
       <span class="caret">${closed ? '▶' : '▼'}</span>
-    </button>
+    </button>`}
     <div class="body${closed ? ' hidden' : ''}">
       <div class="dexgrid" style="--cols:${UI.cols}"></div>
       <button class="secmore hidden btn btn-ghost w-full mt-3"></button>
     </div>`;
+  if (g.flat) { fillSection(sec); sec.querySelector('.secmore').onclick = () => fillSection(sec); return sec; }
   sec.querySelector('.sechead').onclick = () => {
     const now = !UI.closed[g.k];
     UI.closed[g.k] = now; write(K_UI, UI);
@@ -1176,7 +1422,7 @@ function openEditor(it) {
   editingId = it?.id || null;
   $('#editorTitle').textContent = it ? (isCustom(it.id) ? '編輯' : '改 tag') : '自訂加入一件';
   $('#eName').value = it?.name || ''; $('#eJa').value = it?.name_ja || '';
-  $('#eType').value = it?.type === 'kuji' ? 'k' : 'g';
+  setEType(it?.type === 'kuji' ? 'k' : 'g');
   $('#eDate').value = it?.release_date || '';
   $('#eKuji').value = it?.kuji || ''; $('#ePrize').value = it?.prize || '';
   $('#eChar').value = it?.character || '';
@@ -1187,15 +1433,19 @@ function openEditor(it) {
   $('#ePlace').value = it?.place || '';
   $('#ePrice').value = it?.price || ''; $('#eUrl').value = it?.url || '';
   $('#eImg').value = it?.image_remote || it?.image || '';
-  $('#kujiFields').style.display = $('#eType').value === 'k' ? '' : 'none';
   $('#editorDelete').classList.toggle('hidden', !isCustom(it?.id));
   $('#editorDelete').textContent = inBase(it?.id) ? '還原官網資料' : '刪除';
   $('#editor').showModal();
 }
 
-$('#eType').addEventListener('change', e => {
-  $('#kujiFields').style.display = e.target.value === 'k' ? '' : 'none';
-});
+/* 兩個選項唔使下拉，兩粒掣夠晒 —— 順便避開 dialog 入面下拉會俾
+   overflow 切走嘅問題。 */
+function setEType(v) {
+  $('#eType').dataset.v = v;
+  $$('#eType [data-t]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === v)));
+  $('#kujiFields').style.display = v === 'k' ? '' : 'none';
+}
+$$('#eType [data-t]').forEach(b => b.onclick = () => setEType(b.dataset.t));
 $('#editorCancel').onclick = () => $('#editor').close();
 $('#editorSave').onclick = () => {
   const name = $('#eName').value.trim();
@@ -1211,7 +1461,7 @@ $('#editorSave').onclick = () => {
     place: $('#ePlace').value.trim(),
     release_date: $('#eDate').value,
     price: +$('#ePrice').value || 0,
-    type: $('#eType').value === 'k' ? 'kuji' : 'goods',
+    type: $('#eType').dataset.v === 'k' ? 'kuji' : 'goods',
     kuji: $('#eKuji').value.trim(), prize: $('#ePrize').value.trim(),
     image: '', image_remote: $('#eImg').value.trim(),
     url: $('#eUrl').value.trim(),
@@ -1391,6 +1641,11 @@ $('#expMissing').onclick = () => {
   });
 };
 
+/* iOS Safari 唔理 viewport 嘅 user-scalable=no，要自己擋 gesture 事件。
+   app 入面嘅 －／＋ 縮放照樣用得，嗰個係改根字級，唔係瀏覽器縮放。 */
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend'])
+  document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+
 /* ── 主題 / 縮放 ──────────────────────────────────────── */
 const THEMES = [['light', '☀', '白雪'], ['dark', '☾', '黑夜'], ['auto', '◐', '跟系統']];
 function applyTheme(pref) {
@@ -1438,13 +1693,11 @@ let qT;
 $('#q').addEventListener('input', e => {
   F.q = e.target.value; clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
 });
-for (const [sel, key] of [['#fChar', 'char'], ['#fMain', 'main'], ['#fSub', 'sub'],
-                          ['#fTheme', 'theme'], ['#fRegion', 'region']]) {
-  $(sel).addEventListener('change', e => { F[key] = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
-}
-$('#viewBy').addEventListener('change', e => { UI.view = e.target.value; write(K_UI, UI); refresh(); });
-$('#groupBy').addEventListener('change', e => { UI.group = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
-$('#cols').addEventListener('change', e => { UI.cols = +e.target.value; write(K_UI, UI); refresh(); });
+$('#moreFilters').onclick = () => {
+  const panel = $('#filterPanel');
+  const open = panel.classList.toggle('hidden');
+  $('#moreFilters').setAttribute('aria-expanded', String(!open));
+};
 $('#foldAll').onclick = () => {
   const anyOpen = $$('#sections .sechead').some(b => b.getAttribute('aria-expanded') === 'true');
   UI.closed = {};
@@ -1455,8 +1708,8 @@ $('#foldAll').onclick = () => {
 $('#clearFilters').onclick = () => {
   F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
   UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
-  $('#q').value = ''; $('#viewBy').value = 'all'; $('#foldAll').textContent = '全部摺埋';
-  buildOptions(); refresh();
+  $('#q').value = ''; $('#foldAll').textContent = '全部摺埋';
+  refresh();
 };
 $('#addItem').onclick = () => openEditor(null);
 $('#blankAdd').onclick = () => openEditor(null);
@@ -1488,7 +1741,6 @@ $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#
 /* ── 開機 ─────────────────────────────────────────────── */
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
-$('#groupBy').value = UI.group; $('#viewBy').value = UI.view; $('#cols').value = UI.cols;
 applyTheme(localStorage.getItem('ck.theme') || 'light');
 applyZoom(curZoom());
 
