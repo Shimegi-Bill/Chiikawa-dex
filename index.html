@@ -130,6 +130,20 @@ tailwind.config = {
   .chip.se{color:var(--sky)}
   .chip.ca{color:var(--mint)}
   .chip.rg{color:var(--gold);border-color:var(--gold)}
+  .chip.set{color:var(--sky);border-color:var(--sky)}
+  .chip.set.full{background:var(--gold);border-color:var(--gold);color:var(--sealInk);font-weight:700}
+
+  /* 詳情頁：同一套嘅其他隻 */
+  .setrow{display:flex;flex-wrap:wrap;gap:.5rem}
+  .setrow button{display:flex;flex-direction:column;align-items:center;gap:.2rem;width:3.1rem}
+  .setrow .ava{width:2.6rem;height:2.6rem}
+  .setrow em{font-style:normal;font-size:.6rem;line-height:1.15;color:var(--dim);
+    text-align:center;max-width:3.1rem;overflow:hidden;display:-webkit-box;
+    -webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .setrow button[data-own="0"] .ava{filter:grayscale(1) opacity(.5)}
+  .setrow button[data-own="1"] .ava{box-shadow:0 0 0 2px var(--gold)}
+  .setrow button[data-own="1"] em{color:var(--paper);font-weight:700}
+  .setrow button[data-own="2"] .ava{box-shadow:0 0 0 2px var(--rose);filter:grayscale(.5)}
 
   .tag{font-size:.75rem;padding:.25rem .7rem;border-radius:99px;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);transition:.14s}
@@ -342,6 +356,13 @@ tailwind.config = {
   <div>
     <h2 class="font-round font-bold text-lg mb-1">收藏概況</h2>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3" id="statCards"></div>
+  </div>
+  <div>
+    <div class="flex items-baseline justify-between mb-3">
+      <h3 class="font-round font-bold">差少少就齊嘅套裝</h3>
+      <span class="text-dim text-[.75rem]" id="statSetHead"></span>
+    </div>
+    <div id="statSet" class="space-y-2"></div>
   </div>
   <div><h3 class="font-round font-bold mb-3">按角色</h3><div id="statChar" class="space-y-2"></div></div>
   <div><h3 class="font-round font-bold mb-3">按系列</h3><div id="statSeries" class="space-y-2"></div></div>
@@ -846,6 +867,7 @@ function buildOptions() {
   for (const k of ['char', 'main', 'sub', 'theme', 'region'])
     if (F[k] && !OPTS[k].includes(F[k])) F[k] = '';
 
+  buildSets();
   buildAvatars();
   renderControls();
 
@@ -858,6 +880,49 @@ function buildOptions() {
 }
 
 
+
+/* ══ 套裝 ═══════════════════════════════════════════════════
+   官網有啲嘢係一套出：同一個款做八隻角色，產品頁用 swatch 串埋，
+   但官方冇畀任何系列 tag，每隻都係獨立商品。
+   所以自己由商品名推：去咗尾嗰個括號（角色／款式）之後，
+   同名＋同系列＋同細類嘅就當一套。
+
+   點解要三重條件：淨靠名會撞 —— 唔同系列可能都有「毛絨公仔掛件」，
+   加埋系列同細類就唔會亂夾埋。
+═══════════════════════════════════════════════════════════ */
+let SETS = new Map();
+
+function baseName(name) {
+  let s = name;
+  // 有啲名有兩個尾括號，例如「…（兔兔）（S）」，剝兩次
+  for (let i = 0; i < 2; i++) s = s.replace(/[（(][^（()）]{1,30}[)）]\s*$/, '').trim();
+  return s.replace(/\s+/g, ' ');
+}
+
+function buildSets() {
+  const m = new Map();
+  for (const it of CATALOG) {
+    delete it.set_key;
+    const base = baseName(it.name);
+    if (base.length < 3 || base === it.name) continue;   // 冇括號嘅唔當套裝
+    const key = `${it.theme}|${it.sub_category}|${base}`;
+    if (!m.has(key)) m.set(key, { key, base, items: [] });
+    m.get(key).items.push(it);
+  }
+  SETS = new Map();
+  for (const s of m.values()) {
+    if (s.items.length < 2) continue;                    // 得一件唔算套裝
+    s.items.sort((x, y) => cmpStr(x.release_date, y.release_date)
+      || x.name.localeCompare(y.name, 'zh-Hant'));
+    s.name = s.base.replace(/^(吉伊卡哇|ちいかわ)\s*/, '') || s.base;
+    for (const it of s.items) it.set_key = s.key;
+    SETS.set(s.key, s);
+  }
+}
+
+const setOf = it => it.set_key ? SETS.get(it.set_key) : null;
+const setOwned = s => s.items.filter(i => st(i.id) === 1).length;
+
 /* ══ 篩選控制項 ═══════════════════════════════════════════
    全部自己畫：角色打橫攤開做 chip，其餘做自訂下拉。
    唔用 <select> —— iOS 會彈原生轉盤，樣式控制唔到，
@@ -869,7 +934,7 @@ const VIEWS = [
 ];
 const GROUPS = [
   ['none', '唔分段'], ['theme', '按系列'], ['main', '按大類'], ['sub', '按細類'],
-  ['char', '按角色'], ['region', '按地區'], ['place', '按地點'], ['month', '按月份'],
+  ['char', '按角色'], ['set', '按套裝'], ['region', '按地區'], ['place', '按地點'], ['month', '按月份'],
 ];
 const cnt = (f, v) => TALLY[f]?.get(v) || 0;
 
@@ -1030,6 +1095,9 @@ function groupsOf(list) {
       const cs = splitChars(it.character);
       if (!cs.length) put('char:—', '冇指定角色', it);
       else cs.forEach(c => put('char:' + c, c, it));
+    } else if (UI.group === 'set') {
+      const s = setOf(it);
+      put(s ? 'set:' + s.key : 'set:—', s ? s.name : '單件（唔屬任何套裝）', it);
     } else if (UI.group === 'place') {
       put('place:' + (it.place || '—'), it.place || '冇指定地點', it);
     } else if (UI.group === 'month') {
@@ -1096,6 +1164,9 @@ function card(it) {
         ${cs.slice(0, 2).map(x => `<span class="chip ch">${esc(x)}</span>`).join('')}
         ${it.region !== '日本' ? `<span class="chip rg">${esc(it.region)}</span>` : ''}
         ${it.place ? `<span class="chip rg">${esc(it.place)}</span>` : ''}
+        ${(() => { const s = setOf(it); if (!s) return '';
+          const o = setOwned(s);
+          return `<span class="chip set${o === s.items.length ? ' full' : ''}">套 ${o}/${s.items.length}</span>`; })()}
         <span class="chip ca">${esc(it.sub_category)}</span>
       </div>
     </div>`;
@@ -1249,6 +1320,27 @@ function openDetail(id) {
         </div>` : ''}
       </div>
 
+      ${(() => {
+        const s = setOf(it); if (!s) return '';
+        const o = setOwned(s);
+        return `<div class="border-t border-ink3 pt-4">
+          <div class="flex items-baseline justify-between mb-2">
+            <p class="font-round font-bold text-[.9rem]">同一套：${esc(s.name)}</p>
+            <span class="text-[.75rem] ${o === s.items.length ? 'text-gold font-bold' : 'text-dim'}">
+              ${o}/${s.items.length}${o === s.items.length ? '　齊晒' : `　仲爭 ${s.items.length - o} 隻`}</span>
+          </div>
+          <div class="setrow">${s.items.map(x => {
+            const [a1, a2] = colorOf(splitChars(x.character)[0]);
+            const sx = COL[x.id]?.ph || x.image || x.image_remote;
+            const label = x.name.slice(baseName(x.name).length).replace(/[（()）]/g, '').trim() || x.name;
+            return `<button data-go="${esc(x.id)}" data-own="${st(x.id)}" title="${esc(x.name)}">
+              <span class="ava" style="--c1:${a1};--c2:${a2}"><b>${esc((splitChars(x.character)[0] || '？')[0])}</b>${
+                sx ? `<img src="${esc(sx)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</span>
+              <em>${esc(label)}</em></button>`;
+          }).join('')}</div>
+        </div>`;
+      })()}
+
       <div class="border-t border-ink3 pt-4">
         <div class="flex items-center justify-between mb-2">
           <p class="font-round font-bold text-[.9rem]">打卡紀錄</p>
@@ -1303,6 +1395,8 @@ function openDetail(id) {
   $$('#detailBody [data-dellog]').forEach(b => b.onclick = () => {
     touch(id).logs.splice(+b.dataset.dellog, 1); write(K_COL, COL); refresh(); openDetail(id);
   });
+  $$('#detailBody .setrow img').forEach(im => im.addEventListener('error', () => im.remove()));
+  $$('#detailBody [data-go]').forEach(b => b.onclick = () => openDetail(b.dataset.go));
   $('#shootPhoto').onclick = () => pickPhoto(id);
   if ($('#rmPhoto')) $('#rmPhoto').onclick = () => { delete touch(id).ph; write(K_COL, COL); refresh(); openDetail(id); };
   $('#editThis').onclick = () => { $('#detail').close(); openEditor(it); };
@@ -1400,6 +1494,23 @@ function renderStats() {
         <span class="text-dim text-[.72rem] w-16 text-right shrink-0">${r.o}/${r.t}</span>
       </div>`).join('');
   };
+  // 對收藏嚟講最有用嗰樣：邊幾套仲爭一兩隻
+  const near = [...SETS.values()].map(s => ({ s, o: setOwned(s) }))
+    .filter(r => r.o > 0 && r.o < r.s.items.length)
+    .sort((a, b) => (a.s.items.length - a.o) - (b.s.items.length - b.o) || b.o - a.o)
+    .slice(0, 15);
+  const done = [...SETS.values()].filter(s => setOwned(s) === s.items.length).length;
+  $('#statSetHead').textContent = SETS.size
+    ? `${SETS.size} 套　·　齊晒 ${done} 套` : '';
+  $('#statSet').innerHTML = near.length ? near.map(r => `
+    <button class="flex items-center gap-3 w-full text-left" data-set="${esc(r.s.items[0].id)}">
+      <span class="text-[.78rem] flex-1 truncate">${esc(r.s.name)}</span>
+      <div class="bar w-20 shrink-0"><span style="width:${(r.o / r.s.items.length * 100).toFixed(0)}%"></span></div>
+      <span class="text-[.72rem] w-20 text-right shrink-0 ${r.s.items.length - r.o === 1 ? 'text-gold font-bold' : 'text-dim'}">仲爭 ${r.s.items.length - r.o} 隻</span>
+    </button>`).join('')
+    : '<p class="text-dim text-[.78rem]">仲未有收集緊嘅套裝。</p>';
+  $$('#statSet [data-set]').forEach(b => b.onclick = () => openDetail(b.dataset.set));
+
   grp('#statChar', x => splitChars(x.character));
   grp('#statSeries', x => [x.theme]);
   grp('#statCat', x => [x.main_category]);
