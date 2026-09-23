@@ -363,6 +363,22 @@ tailwind.config = {
     <p class="text-dim text-[.72rem] mt-2">影嘅相會自動縮到 640px、轉 JPEG 先存，慳位。</p>
   </div>
 
+  <div class="bg-ink2 border border-ink3 rounded-xl p-4">
+    <h3 class="font-round font-bold mb-1">日文翻譯</h3>
+    <p class="text-dim text-[.78rem] mb-2">
+      官網得商品名有繁中，角色名、系列名、分類名一律日文。對照表喺
+      <code class="text-mint">translations.json</code>，同主程式完全分開 ——
+      加詞改詞唔使掂 <code class="text-mint">index.html</code>，refresh 個網就生效。
+      一個繁中詞可以掛幾個日文寫法。
+    </p>
+    <p class="text-dim text-[.75rem]" id="missCount"></p>
+    <p class="text-[.72rem] mt-2 leading-relaxed break-all" id="missList" style="color:var(--rose)"></p>
+    <button class="btn btn-ghost mt-3" id="expMissing">匯出未譯詞 missing-translations.json</button>
+    <p class="text-dim text-[.72rem] mt-2">
+      爬蟲每次行完亦會喺 repo 寫一份，連埋出現次數同例子。
+    </p>
+  </div>
+
   <div class="bg-ink2 border border-rose/40 rounded-xl p-4">
     <h3 class="font-round font-bold mb-1 text-rose">清空</h3>
     <p class="text-dim text-[.78rem] mb-3">刪走所有收藏狀態同打卡紀錄，圖鑑本身唔會變。冇得返轉頭。</p>
@@ -442,6 +458,7 @@ tailwind.config = {
    角色、系列、分類嘅名全部由官網繁中直接抓返嚟，唔喺呢度寫死 ——
    官網出新角色新系列，下次 Action 就自動有。
    呢度淨係擺「冇相時用咩色」同「大類點排」。
+   日文→繁中嘅對照喺 translations.json，同主程式完全分開。
 ════════════════════════════════════════════════════════════ */
 
 /* 認得嘅角色用固定色，認唔得嘅會按個名 hash 出一隻柔和色，
@@ -469,21 +486,6 @@ const PALETTE = {
   '島次郎':     ['#E8E0D0', '#B09E7E'],
 };
 
-/* 官方譯名同你順口嗰個唔同嘅，擺喺呢度 —— 顯示會用右邊，
-   但搵嘢兩邊都搵得到。官網改咗名都唔使驚，對唔上就原樣顯示。 */
-const RENAME = {
-  '烏薩奇': '兔兔',
-  '小桃': '飛鼠',
-  '小桃鼠': '飛鼠',
-  '海獺': '師父',
-  '海獺勇者': '師父',
-  '古本屋': '古本木',
-  '舊書店': '古本木',
-  '小八貓': '小八',
-  '風獅爺': '獅獅',
-  '塞壬': '賽蓮',
-};
-
 /* 大類排位（冇列到嘅排最後，按件數） */
 const MAIN_ORDER = [
   '公仔・吊飾', '地區限定・鐵牌', '雜貨小物', '玩具・收藏',
@@ -495,6 +497,77 @@ const MAIN_ORDER = [
    manual.json 係你自己維護嗰份（港／台／陸／韓／澳限定、一番賞），
    Action 永遠唔會覆蓋，app 會 merge 埋。 */
 const BUILTIN = [];
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════
+   日文 → 繁中 動態翻譯
+   字典喺 translations.json，同呢度完全分開 —— 加詞改詞唔使掂主程式，
+   改完 refresh 個網就生效，唔使重新爬官網。
+   字典係「繁中詞 : [日文寫法…]」，即係多個日文對一個繁中（多對一）。
+════════════════════════════════════════════════════════════ */
+const I18N = {
+  ready: false,
+  exact: new Map(),     // 成句完全相同 → 直接換
+  re: null,             // 所有日文詞嘅大 regex，由長到短
+  map: new Map(),       // 日文詞 → 繁中
+  missing: new Map(),   // 譯唔到嘅日文 → 出現次數
+  terms: 0,
+};
+
+const HAS_KANA = /[\u3040-\u309F\u30A0-\u30FF]/;          // 平假名／片假名
+const KANA_RUN = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g;
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function loadDict(dict) {
+  const pairs = [];
+  for (const [zh, list] of Object.entries(dict?.詞彙 || {})) {
+    for (const ja of (Array.isArray(list) ? list : [list])) {
+      if (!ja) continue;
+      I18N.map.set(ja, zh);
+      I18N.exact.set(ja, zh);
+      pairs.push(ja);
+    }
+  }
+  // 由長到短，先換長詞，唔係「ぬいぐるみ・マスコット」會俾「マスコット」食咗一半
+  pairs.sort((a, b) => b.length - a.length);
+  I18N.re = pairs.length ? new RegExp(pairs.map(reEsc).join('|'), 'g') : null;
+  I18N.terms = pairs.length;
+  I18N.ready = true;
+}
+
+/* 記低譯唔到嘅日文。
+   做法：喺【原文】度將字典識得嘅詞遮走，剩低嘅先係漏網之魚 ——
+   唔係喺譯完之後抽，否則「おばけうさぎ」會變成「おばけ兔兔」
+   咁半中半日咁記低，加返落字典都對唔上。
+   只計含假名嘅 —— 漢字同中文分唔開，「限定」「東京」本身中文都通。 */
+function noteMissing(orig) {
+  const masked = I18N.re ? orig.replace(I18N.re, '\u0000') : orig;
+  for (const run of masked.match(KANA_RUN) || []) {
+    if (!HAS_KANA.test(run)) continue;
+    I18N.missing.set(run, (I18N.missing.get(run) || 0) + 1);
+  }
+}
+
+function tr(s) {
+  if (!s || !I18N.ready) return s || '';
+  const hit = I18N.exact.get(s);
+  if (hit) return hit;
+  if (HAS_KANA.test(s)) noteMissing(s);
+  return I18N.re ? s.replace(I18N.re, m => I18N.map.get(m) ?? m) : s;
+}
+
+/* 逗號分隔嘅角色字串，逐個譯 */
+const trList = s => String(s || '').split(/[,，、]/)
+  .map(x => tr(x.trim())).filter(Boolean).join(', ');
+
+async function initI18n() {
+  try {
+    const r = await fetch('translations.json', { cache: 'no-cache' });
+    if (r.ok) { loadDict(await r.json()); return; }
+  } catch { /* 本機 file:// 開就 fetch 唔到 */ }
+  loadDict({ 詞彙: {} });   // 字典載唔到照行，淨係唔譯
+}
 
 </script>
 <script>
@@ -530,10 +603,18 @@ UI.cols = Math.min(8, Math.max(3, +UI.cols || 4));
 let F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
 let editingId = null;
 
-/* ── 角色字串 → 陣列（逗號分隔，去空白，套用譯名）──────── */
+/* ── 角色字串 → 陣列（逗號分隔，去空白）───────────────── */
 const splitChars = s => String(s || '')
-  .split(/[,，、]/).map(x => x.trim()).filter(Boolean)
-  .map(x => RENAME[x] || x);
+  .split(/[,，、]/).map(x => x.trim()).filter(Boolean);
+
+/* 幣值符號照住 catalog 入面嗰個 code 出，唔知就標「?」，唔好扮有把握 */
+const SYM = { HKD: 'HK$', JPY: '¥', TWD: 'NT$', MOP: 'MOP$', CNY: '¥', KRW: '₩', USD: 'US$' };
+const money = it => {
+  if (!it.price) return '';
+  const n = it.price.toLocaleString('zh-HK', { maximumFractionDigits: 2 });
+  return it.currency && SYM[it.currency] ? SYM[it.currency] + n
+       : it.currency ? `${n} ${it.currency}` : `${n} ?`;
+};
 
 const colorOf = name => {
   if (PALETTE[name]) return PALETTE[name];
@@ -544,20 +625,26 @@ const colorOf = name => {
 
 /* ── 圖鑑組裝：custom 覆蓋同 id 嘅官網資料 ───────────────── */
 function normalize(x) {
-  const character = splitChars(x.character).join(', ');
+  /* 商品名：官網有官方繁中就原封不動照用（name_official === true）。
+     官網冇譯（ご当地、自訂加入嗰啲）先攞字典嚟譯。
+     角色名、系列名、細類名官網一律冇翻譯，所以一定要譯。
+     對照表喺 translations.json，改完 refresh 就生效，唔使重新爬。 */
+  const raw = x.name || x.name_ja || '(未命名)';
   return {
     ...x,
     id: String(x.id),
-    name: x.name || x.name_ja || '(未命名)',
-    name_ja: x.name_ja || '',
-    character,
-    theme: x.theme || '基本款',
+    name: x.name_official ? raw : tr(raw),
+    name_official: !!x.name_official,
+    name_ja: x.name_ja || x.name || '',
+    character: trList(x.character),
+    theme: tr(x.theme) || '基本款',
     main_category: x.main_category || '其他',
-    sub_category: x.sub_category || '其他',
-    region: x.region || '日本',
-    place: x.place || '',
+    sub_category: tr(x.sub_category) || '其他',
+    region: tr(x.region) || '日本',
+    place: tr(x.place),
     release_date: x.release_date || '',
     price: +x.price || 0,
+    currency: x.currency || 'JPY',
     type: x.type || 'goods',
     image: x.image || '', image_remote: x.image_remote || '',
     url: x.url || '', first_seen: x.first_seen || '',
@@ -734,7 +821,7 @@ function card(it) {
       ${it.type === 'kuji' && it.kuji ? `<div class="text-sky text-[.66rem]">${esc(it.kuji)}</div>` : ''}
       <div class="mt-auto flex items-center justify-between gap-2 pt-1">
         <span class="text-dim text-[.66rem]">${it.release_date ? esc(it.release_date) : '日期待補'}</span>
-        <span class="text-[.7rem] font-bold ${s === 1 ? 'text-gold' : 'text-dim'}">${it.price ? '¥' + it.price.toLocaleString() : ''}</span>
+        <span class="text-[.7rem] font-bold ${s === 1 ? 'text-gold' : 'text-dim'}">${money(it)}</span>
       </div>
       <div class="flex flex-wrap gap-[.25rem]">
         ${cs.slice(0, 2).map(x => `<span class="chip ch">${esc(x)}</span>`).join('')}
@@ -869,7 +956,7 @@ function openDetail(id) {
 
       <dl class="grid grid-cols-2 gap-y-2 text-[.8rem]">
         <dt class="text-dim">發售日期</dt><dd>${it.release_date ? esc(it.release_date) : '—'}</dd>
-        <dt class="text-dim">定價</dt><dd>${it.price ? '¥' + it.price.toLocaleString() : '—'}</dd>
+        <dt class="text-dim">定價</dt><dd>${money(it) || '—'}${it.currency === '?' ? '<span class="text-rose text-[.7rem]">　幣值唔肯定</span>' : ''}</dd>
         <dt class="text-dim">編號</dt><dd class="font-mono text-[.72rem]">${esc(it.id)}</dd>
       </dl>
 
@@ -1237,6 +1324,30 @@ async function fetchCatalog() {
 }
 $('#autoCat').onchange = e => { autoCat = e.target.checked; write(K_AUTOCAT, autoCat); if (autoCat) fetchCatalog(); };
 
+/* ── 未翻譯詞彙 ───────────────────────────────────────── */
+function renderMissing() {
+  const rows = [...I18N.missing.entries()].sort((a, b) => b[1] - a[1]);
+  $('#missCount').textContent = I18N.ready
+    ? `字典有 ${I18N.terms} 個日文詞　·　呢次見到 ${rows.length} 個未譯`
+    : '字典載唔到（本機用 file:// 開就 fetch 唔到）';
+  $('#missList').textContent = rows.length
+    ? rows.slice(0, 40).map(([w, n]) => `${w}×${n}`).join('　')
+    : '冇未譯嘅日文。';
+  $('#expMissing').disabled = !rows.length;
+  $('#expMissing').style.opacity = rows.length ? 1 : .45;
+}
+$('#expMissing').onclick = () => {
+  const rows = [...I18N.missing.entries()].sort((a, b) => b[1] - a[1]);
+  if (!rows.length) return toast('冇未譯嘅日文');
+  download('missing-translations.json', {
+    _說明: '字典 translations.json 未有嘅日文詞，按出現次數排。譯好就加返落 translations.json 個「詞彙」度。',
+    _產生時間: new Date().toISOString(),
+    _字典詞數: I18N.terms,
+    _未譯詞數: rows.length,
+    詞彙: rows.map(([詞, 次數]) => ({ 詞, 次數 })),
+  });
+};
+
 /* ── 主題 / 縮放 ──────────────────────────────────────── */
 const THEMES = [['light', '☀', '白雪'], ['dark', '☾', '黑夜'], ['auto', '◐', '跟系統']];
 function applyTheme(pref) {
@@ -1336,9 +1447,14 @@ $('#autoCat').checked = autoCat;
 $('#groupBy').value = UI.group; $('#viewBy').value = UI.view; $('#cols').value = UI.cols;
 applyTheme(localStorage.getItem('ck.theme') || 'light');
 applyZoom(curZoom());
-loadCatalog(); refresh(); syncStatus();
-fetchCatalog();
-if (SY.auto && SY.url) doSync(true);
+
+(async () => {
+  await initI18n();               // 字典要喺圖鑑之前載，唔係啲名會譯漏
+  loadCatalog(); refresh(); syncStatus(); renderMissing();
+  await fetchCatalog();
+  renderMissing();
+  if (SY.auto && SY.url) doSync(true);
+})();
 
 </script>
 </body>
