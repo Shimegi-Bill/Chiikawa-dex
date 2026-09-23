@@ -594,10 +594,10 @@ const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } };
-const write = (k, v) => {
+const write = (k, v, silent) => {
   try { localStorage.setItem(k, JSON.stringify(v)); return true }
   catch (e) {
-    toast(e.name === 'QuotaExceededError'
+    if (!silent) toast(e.name === 'QuotaExceededError'
       ? '儲存空間爆咗。去「資料」匯出備份，再刪走幾張打卡相。'
       : '儲存唔到：' + e.name);
     return false;
@@ -607,6 +607,14 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
 let CATALOG = [], OPTS = {};
+
+/* 成份圖鑑（近 9000 件、幾 MB）放記憶體，唔靠 localStorage ——
+   localStorage 得 5MB，塞唔落就會靜靜雞掟 QuotaExceededError，
+   跟住 loadCatalog 讀返空嘅，畫面就得個吉。
+   反正每次開頁都會由 catalog.json fetch 返，唔使佢長存。
+   localStorage 淨係當離線後備，塞得落就塞，塞唔落照行。 */
+let MEM_CAT = null;
+let CAT_PERSISTED = true;
 let COL = read(K_COL, {});
 let UI = Object.assign({ cols: 4, group: 'theme', view: 'all', closed: {} }, read(K_UI, {}));
 UI.cols = Math.min(8, Math.max(3, +UI.cols || 4));
@@ -662,7 +670,7 @@ function normalize(x) {
 }
 
 function loadCatalog() {
-  const base = read(K_CAT, null);
+  const base = MEM_CAT || read(K_CAT, null);
   const custom = read(K_CUSTOM, []);
   const over = new Map(custom.map(x => [String(x.id), x]));
   const arr = (Array.isArray(base) && base.length ? base : BUILTIN)
@@ -672,7 +680,8 @@ function loadCatalog() {
   buildOptions();
   $('#catalogInfo').textContent =
     `現時 ${CATALOG.length} 件　·　${Array.isArray(base) && base.length ? '已載入官網資料' : '未有圖鑑資料'}` +
-    (custom.length ? `　·　自訂／改過 ${custom.length} 件` : '');
+    (custom.length ? `　·　自訂／改過 ${custom.length} 件` : '') +
+    (CAT_PERSISTED ? '' : '　·　太大存唔入瀏覽器，每次開頁重新載入');
 }
 
 /* ── 動態產生篩選選項：全部由資料本身抽出嚟、去重 ─────────
@@ -690,9 +699,16 @@ function buildOptions() {
     region: uniq('region').sort((a, b) => a.localeCompare(b, 'zh-Hant')),
   };
 
-  const count = (f, v) => f === 'char'
-    ? CATALOG.filter(x => splitChars(x.character).includes(v)).length
-    : CATALOG.filter(x => x[{ main: 'main_category', sub: 'sub_category', theme: 'theme', region: 'region' }[f]] === v).length;
+  /* 一次過數晒，唔好逐個選項掃一次成個圖鑑 ——
+     9000 件 × 120 個選項 ＝ 成百萬次比對，喺手機會頓。 */
+  const tally = { char: new Map(), main: new Map(), sub: new Map(), theme: new Map(), region: new Map() };
+  const bump = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+  for (const x of CATALOG) {
+    for (const c of splitChars(x.character)) bump(tally.char, c);
+    bump(tally.main, x.main_category); bump(tally.sub, x.sub_category);
+    bump(tally.theme, x.theme); bump(tally.region, x.region);
+  }
+  const count = (f, v) => tally[f].get(v) || 0;
 
   const fill = (sel, key, allLabel) => {
     const el = $(sel), keep = F[key];
@@ -1118,12 +1134,19 @@ function renderStats() {
     box('已入手', own.length, 'text-gold') + box('未入手', all - own.length - want) +
     box('想要', want, 'text-rose') + box('累積花費', '¥' + spent.toLocaleString(), 'text-mint');
 
-  const grp = (host, values, match) => {
-    const rows = values.map(v => {
-      const items = CATALOG.filter(x => match(x, v));
-      const o = items.filter(i => st(i.id) === 1).length;
-      return { v, o, t: items.length };
-    }).filter(r => r.t).sort((a, b) => b.t - a.t);
+  const grp = (host, keysOf) => {
+    // 同樣一次過數晒：掃一次圖鑑，順手記低每個值嘅總數同已入手數
+    const m = new Map();
+    for (const x of CATALOG) {
+      const owned = st(x.id) === 1;
+      for (const v of keysOf(x)) {
+        if (!v) continue;
+        const r = m.get(v) || { v, o: 0, t: 0 };
+        r.t++; if (owned) r.o++;
+        m.set(v, r);
+      }
+    }
+    const rows = [...m.values()].sort((a, b) => b.t - a.t);
     $(host).innerHTML = rows.map(r => `
       <div class="flex items-center gap-3">
         <span class="text-[.78rem] w-28 shrink-0 truncate">${esc(r.v)}</span>
@@ -1131,9 +1154,9 @@ function renderStats() {
         <span class="text-dim text-[.72rem] w-16 text-right shrink-0">${r.o}/${r.t}</span>
       </div>`).join('');
   };
-  grp('#statChar', OPTS.char || [], (x, v) => splitChars(x.character).includes(v));
-  grp('#statSeries', OPTS.theme || [], (x, v) => x.theme === v);
-  grp('#statCat', OPTS.main || [], (x, v) => x.main_category === v);
+  grp('#statChar', x => splitChars(x.character));
+  grp('#statSeries', x => [x.theme]);
+  grp('#statCat', x => [x.main_category]);
 }
 
 function renderQuota() {
@@ -1234,7 +1257,8 @@ $('#filePick').addEventListener('change', e => {
     } else {
       const arr = Array.isArray(data) ? data : data.items;
       if (!Array.isArray(arr) || !arr.length) return toast('呢個唔似係圖鑑檔');
-      write(K_CAT, arr); loadCatalog(); toast(`圖鑑已更新：${arr.length} 件`);
+      setCatalog(arr);
+      toast(`圖鑑已更新：${arr.length} 件` + (CAT_PERSISTED ? '' : '（太大，關咗頁要再匯入）'));
     }
     refresh();
   });
@@ -1324,13 +1348,22 @@ async function fetchCatalog() {
   const seen = new Set(auto.map(x => String(x.id)));
   const arr = [...auto, ...manual.filter(x => !seen.has(String(x.id)))];
   if (!arr.length) return;
-  const cur = read(K_CAT, null);
+  const cur = MEM_CAT || read(K_CAT, null);
   const same = Array.isArray(cur) && cur.length === arr.length &&
     String(cur[0]?.id) === String(arr[0]?.id) && String(cur.at(-1)?.id) === String(arr.at(-1)?.id);
   if (same) return;
   const before = cur?.length || 0;
-  write(K_CAT, arr); loadCatalog(); refresh();
+  setCatalog(arr);
   toast(before ? `圖鑑更新咗：${before} → ${arr.length} 件` : `載入咗 ${arr.length} 件`);
+}
+
+/* 記憶體行先，順便試下塞唔塞得入 localStorage 做離線後備。
+   塞唔入唔算出錯，靜靜哋過就算，唔好嚇親人。 */
+function setCatalog(arr) {
+  MEM_CAT = arr;
+  CAT_PERSISTED = write(K_CAT, arr, true);
+  if (!CAT_PERSISTED) localStorage.removeItem(K_CAT);   // 唔好留半截舊資料
+  loadCatalog(); refresh();
 }
 $('#autoCat').onchange = e => { autoCat = e.target.checked; write(K_AUTOCAT, autoCat); if (autoCat) fetchCatalog(); };
 
@@ -1438,6 +1471,7 @@ $('#expManual').onclick = () => {
 };
 $('#resetCatalog').onclick = () => {
   if (!confirm('清走已載入嘅官網資料？收藏紀錄照樣保留，下次開頁會重新載入。')) return;
+  MEM_CAT = null; CAT_PERSISTED = true;
   localStorage.removeItem(K_CAT); loadCatalog(); refresh(); toast('清咗');
 };
 $('#wipe').onclick = () => {

@@ -105,6 +105,38 @@ const MAIN_BY_NAME = [
 const mainOf = (handle, name) =>
   MAIN_OF[handle] || (MAIN_BY_NAME.find(([re]) => re.test(name || ''))?.[1]) || MAIN_FALLBACK;
 
+/* 有啲商品官網根本冇擺入任何分類 collection（上次有 345 件），
+   淨靠 collection 歸屬就會變晒「其他」。呢度由商品名反推細類同大類。
+   中日文都擺埋 —— 官方繁中名同日文原名都試一次。
+   次序好緊要：「毛絨公仔掛件」同時有「掛件」同「公仔」，
+   掛件要行喺公仔前面先唔會歸錯。 */
+const GUESS_SUB = [
+  [/磁鐵|磁石|マグネット|プレート/,            '鐵牌・磁石牌', '地區限定・鐵牌'],
+  [/鑰匙圈|鎖匙扣|キーホルダー|キーリング/,      '鎖匙扣',      '雜貨小物'],
+  [/掛件|吊飾|マスコット/,                    '掛飾公仔',    '公仔・吊飾'],
+  [/玩偶|公仔|絨毛|ぬいぐるみ/,                '公仔',        '公仔・吊飾'],
+  [/壓克力|亞加力|アクリル/,                   '亞加力企牌',  '玩具・收藏'],
+  [/徽章|襟章|バッジ|ピンズ/,                  '襟章',        '玩具・收藏'],
+  [/公仔模型|フィギュア/,                      '模型',        '玩具・收藏'],
+  [/拼圖|砌圖|パズル|おもちゃ|玩具/,           '玩具・砌圖',  '玩具・收藏'],
+  [/毛巾|タオル/,                             '毛巾',        '家居・生活'],
+  [/抱枕|攬枕|毛毯|寢具|クッション|ブランケット/, '攬枕・床品',  '家居・生活'],
+  [/馬克杯|玻璃杯|碗|碟|盤|筷|餐具|マグ|グラス|皿|箸|どんぶり/, '杯碟餐具', '家居・生活'],
+  [/T恤|Tシャツ|上衣|衛衣|パーカー|スウェット/,  'T恤・衫褲',   '衫褲鞋襪'],
+  [/襪|ソックス|靴下/,                        '襪',          '衫褲鞋襪'],
+  [/帽|キャップ|ハット/,                      '帽',          '衫褲鞋襪'],
+  [/手提袋|托特包|收納包|化妝包|散紙包|バッグ|ポーチ/, '袋・收納包', '雜貨小物'],
+  [/錢包|銀包|財布|ウォレット/,                '銀包',        '雜貨小物'],
+  [/資料夾|筆記本|便條|信紙|貼紙|文具|原子筆|ファイル|ノート|ステッカー|ペン/, '文具', '文具・紙品'],
+  [/手機|스마|スマホ|ケーブル|充電/,           '手機周邊',    '電子・手機'],
+  [/軟糖|餅乾|糖果|零食|お菓子|ラムネ|キャンディ/, '零食',      '食品'],
+  [/福袋|ハッピーバッグ/,                      '福袋',        '雜貨小物'],
+];
+const guessSub = (...names) => {
+  const s = names.filter(Boolean).join(' ');
+  return GUESS_SUB.find(([re]) => re.test(s)) || null;
+};
+
 /* ══ 隔走預購／重複 ═══════════════════════════════════════ */
 const PREORDER = /予約|受注|預購|預訂|豫約|Pre-?order|Pre-?Order/i;
 // 剝走中括號內嘅落單須知同預購字樣，淨返商品本身個名，用嚟捉重複
@@ -353,7 +385,7 @@ async function main() {
   console.log('\n抓分類歸屬…');   const catOf = await memberOf('category');
 
   console.log('\n整理…');
-  let dropPre = 0, dropDup = 0, fixedChar = 0;
+  let dropPre = 0, dropDup = 0, fixedChar = 0, guessed = 0;
   const byName = new Map();
   const items = [];
 
@@ -382,6 +414,8 @@ async function main() {
     }
 
     const cat = (catOf.get(sid) || [])[0];
+    const guess = cat ? null : guessSub(title, jaName);   // 官網冇歸類先估
+    if (!cat && guess) guessed++;
     const v = p.variants?.[0];
     items.push({
       id: v?.barcode || v?.sku || sid,
@@ -391,8 +425,8 @@ async function main() {
       name_official: title !== jaName,  // 兩邊一樣＝官網冇譯呢件
       character: chars.join(', '),
       theme: (themeOf.get(sid) || [])[0]?.label || '基本款',
-      sub_category: cat?.label || '其他',
-      main_category: mainOf(cat?.handle, cat?.label),
+      sub_category: cat?.label || guess?.[1] || '其他',
+      main_category: cat ? mainOf(cat.handle, cat.label) : (guess?.[2] || MAIN_FALLBACK),
       region: '日本', place: '',
       release_date: (p.published_at || '').slice(0, 10),
       price: Math.round((+(v?.price || 0)) * 100) / 100,
@@ -406,6 +440,7 @@ async function main() {
     });
   }
   console.log(`  隔走預購 ${dropPre} 件 · 重複 ${dropDup} 件 · 修正角色 tag ${fixedChar} 件`);
+  console.log(`  官網冇歸類、由商品名估出分類：${guessed} 件`);
 
   /* ── 驗返幣值 ──────────────────────────────────────────
      日圓冇仙位，港幣有。所以只有喺讀唔到 currency code 嗰陣
