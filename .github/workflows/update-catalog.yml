@@ -55,4 +55,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add catalog.json missing-translations.json img
           git commit -m "圖鑑更新：${{ steps.diff.outputs.count }} 件 · ${{ steps.diff.outputs.pics }} 張相 · ${{ steps.diff.outputs.miss }} 個詞未譯（$(date -u -d '+8 hours' +%Y-%m-%d)）"
-          git push
+          # 抓成個官網要廿幾分鐘，期間你好可能 push 咗嘢上去，
+          # 咁 runner 手上嗰份就落後咗，直接 push 會俾 remote 彈返。
+          # rebase 一次就接得返 —— 呢個 job 只掂 catalog.json / missing / img，
+          # 同你手改嗰啲檔唔會撞。試三次都唔得先當真係 fail。
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "push 唔到，等 10 秒再試（第 $i 次）"
+            sleep 10
+          done
+          echo "::error::三次都 push 唔到，可能有 conflict，要自己睇下"
+          exit 1
