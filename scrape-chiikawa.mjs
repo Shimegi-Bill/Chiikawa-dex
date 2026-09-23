@@ -17,8 +17,10 @@
  * ── 商品名用官方繁中，tag 用字典 ──────────────────────────
  * 官網有 zh-hant locale，products.json 一樣食呢個前綴，所以商品名
  * 直接攞官方翻譯，一個字都唔改。
- * 但 collection 標題（角色名、系列名、分類名）官網冇翻譯，一律日文，
- * 所以原封不動輸出，由網頁層照 translations.json 譯。
+ * collection 標題（角色名、系列名、分類名）官網有繁中，但係台灣叫法
+ * （小八貓、小桃鼠、海獺、盔甲、獅薩…），所以原封不動輸出，
+ * 由網頁層照 translations.json 換成香港叫法。冇繁中嘅就照出日文，
+ * 一樣由字典處理。
  *
  * 每件嘢有個 name_official：官方繁中名同日文名唔同 → true（有翻譯），
  * 一模一樣 → false（官網根本冇譯呢件）。ご当地 嗰批一律 false。
@@ -66,8 +68,9 @@ const TODAY = new Date().toISOString().slice(0, 10);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const UA = { 'User-Agent': 'chiikawa-dex/2.0' };
 
-/* 角色名、系列名、分類名一律原樣輸出日文 —— 翻譯喺網頁層做，
-   對照表喺 translations.json。咁改譯名就唔使重新爬成個官網。 */
+/* 角色名、系列名、分類名一律原樣輸出官網嗰個（多數係台灣繁中，
+   間中係日文）—— 換成香港叫法喺網頁層做，對照表喺 translations.json。
+   咁改譯名就唔使重新爬成個官網。 */
 
 /* ══ 大類：官網自己嘅分類係細類，大類我哋自己歸 ═══════════════
    左邊係官網 collection handle，右邊係大類。
@@ -161,6 +164,12 @@ const SEED = {
 };
 const SKIP = new Set(['all','newitems','restock','preorder','tshirt-sale','wishlist']);
 
+/* 導覽入面「新商品／再入荷」嗰組排喺角色前面，唔擋住就會跌晒落角色度 ——
+   上一次就係咁搞到角色清單有「8月28日預訂商品」「9月3日重新上貨商品」。
+   按 handle 同 label 兩邊夾攻。 */
+const SKIP_HANDLE = /^(\d|restock|re-?nyuka|preorder|yoyaku|reserve|new-?item|newarrival|sale|outlet)/i;
+const SKIP_LABEL = /(\d+\s*月\s*\d+\s*日|預訂|預購|預約|重新上貨|重新上架|再入荷|補貨|新商品|新品|新到貨|即將發售|發售預定|予約|入荷|再販)/;
+
 function linksIn(html) {
   return [...html.matchAll(
     /<a[^>]+href="(?:https:\/\/chiikawamarket\.jp)?(?:\/[a-z-]+)?\/collections\/([a-z0-9][a-z0-9-]*)[\/"?#][^>]*>([\s\S]{0,120}?)<\/a>/gi
@@ -172,8 +181,9 @@ function linksIn(html) {
 
 async function discover() {
   const groups = { character: new Map(), series: new Map(), category: new Map() };
+  let skipped = 0;
   const add = (g, h, label) => {
-    if (SKIP.has(h) || /^\d/.test(h)) return;
+    if (SKIP.has(h) || SKIP_HANDLE.test(h) || (label && SKIP_LABEL.test(label))) { skipped++; return; }
     if (!groups[g].has(h) || label) groups[g].set(h, label || groups[g].get(h) || h);
   };
 
@@ -196,7 +206,8 @@ async function discover() {
   for (const [k, list] of Object.entries(SEED)) for (const h of list) add(k, h);
 
   for (const k of Object.keys(groups))
-    console.log(`  ${k}：${groups[k].size} 個 —— ${[...groups[k].values()].slice(0, 8).join('、')}…`);
+    console.log(`  ${k}：${groups[k].size} 個 —— ${[...groups[k].values()].join('、')}`);
+  if (skipped) console.log(`  （隔走 ${skipped} 個唔係角色／系列／分類嘅，例如「新商品」「X月X日重新上貨商品」）`);
   return groups;
 }
 
@@ -462,6 +473,8 @@ async function main() {
      「限定」「東京」本身中文睇得明，冇必要當佢哋係漏譯。 */
   try {
     const dict = JSON.parse(await fsp.readFile('translations.json', 'utf8'));
+    // 「整句」嗰批係成個欄位完全相同先算，所以淨係用嚟剔走，唔入替換 regex
+    const whole = new Set(Object.values(dict.整句 || {}).flat().filter(Boolean));
     const terms = Object.values(dict.詞彙 || {}).flat().filter(Boolean)
       .sort((x, y) => y.length - x.length);
     const re = terms.length
@@ -480,7 +493,7 @@ async function main() {
         ? ['character', 'theme', 'sub_category', 'place']
         : ['name', 'character', 'theme', 'sub_category', 'place'];
       for (const f of fields) {
-        const v = x[f]; if (!v || !KANA.test(v)) continue;
+        const v = x[f]; if (!v || !KANA.test(v) || whole.has(v.trim())) continue;
         for (const run of (re ? v.replace(re, '\u0000') : v).match(RUN) || []) {
           if (!KANA.test(run)) continue;
           miss.set(run, (miss.get(run) || 0) + 1);
@@ -493,7 +506,7 @@ async function main() {
     await fsp.writeFile(MISSING_OUT, JSON.stringify({
       _說明: '字典 translations.json 未有嘅日文詞，按出現次數排。譯好就加返落 translations.json 個「詞彙」度。',
       _產生時間: new Date().toISOString(),
-      _字典詞數: terms.length,
+      _字典詞數: terms.length + whole.size,
       _未譯詞數: rows.length,
       _官網未有繁中名: noZh,
       詞彙: rows,

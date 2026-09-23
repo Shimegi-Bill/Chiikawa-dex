@@ -508,9 +508,10 @@ const BUILTIN = [];
 ════════════════════════════════════════════════════════════ */
 const I18N = {
   ready: false,
-  exact: new Map(),     // 成句完全相同 → 直接換
-  re: null,             // 所有日文詞嘅大 regex，由長到短
-  map: new Map(),       // 日文詞 → 繁中
+  whole: new Map(),     // 「整句」—— 成個欄位完全相同先換，唔做子字串
+  exact: new Map(),     // 「詞彙」入面成句完全相同嘅捷徑
+  re: null,             // 「詞彙」砌成嘅大 regex，由長到短
+  map: new Map(),       // 詞 → 繁中
   missing: new Map(),   // 譯唔到嘅日文 → 出現次數
   terms: 0,
 };
@@ -520,6 +521,11 @@ const KANA_RUN = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g;
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 function loadDict(dict) {
+  /* 「整句」淨係做完全相同比對，唔會入 regex ——
+     唔係「偶」(オデ) 會將「玩偶」變成「玩歐帝」。 */
+  for (const [zh, list] of Object.entries(dict?.整句 || {}))
+    for (const src of (Array.isArray(list) ? list : [list])) if (src) I18N.whole.set(src, zh);
+
   const pairs = [];
   for (const [zh, list] of Object.entries(dict?.詞彙 || {})) {
     for (const ja of (Array.isArray(list) ? list : [list])) {
@@ -532,7 +538,7 @@ function loadDict(dict) {
   // 由長到短，先換長詞，唔係「ぬいぐるみ・マスコット」會俾「マスコット」食咗一半
   pairs.sort((a, b) => b.length - a.length);
   I18N.re = pairs.length ? new RegExp(pairs.map(reEsc).join('|'), 'g') : null;
-  I18N.terms = pairs.length;
+  I18N.terms = pairs.length + I18N.whole.size;
   I18N.ready = true;
 }
 
@@ -542,6 +548,7 @@ function loadDict(dict) {
    咁半中半日咁記低，加返落字典都對唔上。
    只計含假名嘅 —— 漢字同中文分唔開，「限定」「東京」本身中文都通。 */
 function noteMissing(orig) {
+  if (I18N.whole.has(orig.trim())) return;
   const masked = I18N.re ? orig.replace(I18N.re, '\u0000') : orig;
   for (const run of masked.match(KANA_RUN) || []) {
     if (!HAS_KANA.test(run)) continue;
@@ -551,7 +558,10 @@ function noteMissing(orig) {
 
 function tr(s) {
   if (!s || !I18N.ready) return s || '';
-  const hit = I18N.exact.get(s);
+  const k = s.trim();
+  const w = I18N.whole.get(k);
+  if (w) return w;                       // 整句：成個欄位換晒
+  const hit = I18N.exact.get(k);
   if (hit) return hit;
   if (HAS_KANA.test(s)) noteMissing(s);
   return I18N.re ? s.replace(I18N.re, m => I18N.map.get(m) ?? m) : s;
