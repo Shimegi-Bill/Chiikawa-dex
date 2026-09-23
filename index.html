@@ -220,28 +220,37 @@ tailwind.config = {
 <!-- ══ 圖鑑 ═══════════════════════════════════════════════ -->
 <section id="tab-dex" class="pt-4">
 
-  <div class="flex gap-2 flex-wrap items-center mb-3">
-    <input id="q" class="field flex-1 min-w-[11rem]" placeholder="搵名、角色、系列、賞別…" autocomplete="off">
-    <select id="groupBy" class="field w-auto" aria-label="點樣分段">
-      <option value="se">按系列分段</option>
-      <option value="ch">按角色分段</option>
-      <option value="ca">按類別分段</option>
-      <option value="rg">按發行地區分段</option>
-      <option value="place">按限定地點分段</option>
-      <option value="month">按發售月份分段</option>
+  <div class="flex gap-2 flex-wrap items-center mb-2">
+    <input id="q" class="field flex-1 min-w-[11rem]" placeholder="搵名、角色、系列、地點…" autocomplete="off">
+    <select id="cols" class="field w-auto" aria-label="每行欄數">
+      <option value="3">3 欄</option><option value="4">4 欄</option>
+      <option value="5">5 欄</option><option value="6">6 欄</option>
+      <option value="7">7 欄</option><option value="8">8 欄</option>
     </select>
-    <select id="viewBy" class="field w-auto" aria-label="顯示邊啲">
-      <option value="all">全部</option>
+  </div>
+
+  <div class="flex gap-2 flex-wrap items-center mb-2">
+    <select id="fChar" class="field w-auto" aria-label="角色"></select>
+    <select id="fMain" class="field w-auto" aria-label="大類"></select>
+    <select id="fSub"  class="field w-auto" aria-label="細類"></select>
+    <select id="fTheme" class="field w-auto" aria-label="系列"></select>
+    <select id="fRegion" class="field w-auto" aria-label="地區"></select>
+    <select id="viewBy" class="field w-auto" aria-label="收藏狀態">
+      <option value="all">全部狀態</option>
       <option value="miss">淨係未入手</option>
       <option value="own">淨係已入手</option>
       <option value="want">想要</option>
       <option value="dup">有重複</option>
       <option value="new">新登場</option>
     </select>
-    <select id="cols" class="field w-auto" aria-label="每行欄數">
-      <option value="3">3 欄</option><option value="4">4 欄</option>
-      <option value="5">5 欄</option><option value="6">6 欄</option>
-      <option value="7">7 欄</option><option value="8">8 欄</option>
+    <select id="groupBy" class="field w-auto" aria-label="點樣分段">
+      <option value="theme">按系列分段</option>
+      <option value="main">按大類分段</option>
+      <option value="sub">按細類分段</option>
+      <option value="char">按角色分段</option>
+      <option value="region">按地區分段</option>
+      <option value="place">按限定地點分段</option>
+      <option value="month">按發售月份分段</option>
     </select>
   </div>
 
@@ -380,7 +389,7 @@ tailwind.config = {
     <label class="block"><span class="text-dim text-[.72rem]">名稱（必填）</span>
       <input id="eName" class="field mt-1" required placeholder="例：麵包店店員吊飾公仔（小桃）"></label>
     <label class="block"><span class="text-dim text-[.72rem]">日文原名</span>
-      <input id="eJa" class="field mt-1" placeholder="ちいかわベーカリー スタッフマスコット"></label>
+      <input id="eJa" class="field mt-1" placeholder="日文原名（可以唔填）"></label>
     <div class="grid grid-cols-2 gap-3">
       <label class="block"><span class="text-dim text-[.72rem]">類型</span>
         <select id="eType" class="field mt-1"><option value="g">周邊商品</option><option value="k">一番賞 / くじ</option></select></label>
@@ -389,20 +398,26 @@ tailwind.config = {
     </div>
     <div class="grid grid-cols-2 gap-3" id="kujiFields">
       <label class="block"><span class="text-dim text-[.72rem]">くじ 名稱</span>
-        <input id="eKs" class="field mt-1" placeholder="一番賞 吉伊卡哇"></label>
+        <input id="eKuji" class="field mt-1" placeholder="一番賞 吉伊卡哇"></label>
       <label class="block"><span class="text-dim text-[.72rem]">賞別</span>
-        <input id="ePr" class="field mt-1" placeholder="A賞"></label>
+        <input id="ePrize" class="field mt-1" placeholder="A賞"></label>
     </div>
-    <label class="block"><span class="text-dim text-[.72rem]">角色（可多選）</span>
-      <div id="eChar" class="flex flex-wrap gap-[6px] mt-2"></div></label>
-    <div class="grid grid-cols-2 gap-3">
-      <label class="block"><span class="text-dim text-[.72rem]">系列</span><select id="eSe" class="field mt-1"></select></label>
-      <label class="block"><span class="text-dim text-[.72rem]">類別</span><select id="eCa" class="field mt-1"></select></label>
+    <label class="block"><span class="text-dim text-[.72rem]">角色（用逗號分開，例：吉伊卡哇, 小八）</span>
+      <input id="eChar" class="field mt-1" list="charList" placeholder="吉伊卡哇, 小八">
+      <datalist id="charList"></datalist></label>
+    <div class="grid grid-cols-3 gap-3">
+      <label class="block"><span class="text-dim text-[.72rem]">系列</span>
+        <input id="eTheme" class="field mt-1" list="themeList"><datalist id="themeList"></datalist></label>
+      <label class="block"><span class="text-dim text-[.72rem]">大類</span>
+        <input id="eMain" class="field mt-1" list="mainList"><datalist id="mainList"></datalist></label>
+      <label class="block"><span class="text-dim text-[.72rem]">細類</span>
+        <input id="eSub" class="field mt-1" list="subList"><datalist id="subList"></datalist></label>
     </div>
     <div class="grid grid-cols-2 gap-3">
-      <label class="block"><span class="text-dim text-[.72rem]">發行地區</span><select id="eRg" class="field mt-1"></select></label>
+      <label class="block"><span class="text-dim text-[.72rem]">發行地區</span>
+        <input id="eRg" class="field mt-1" list="rgList"><datalist id="rgList"></datalist></label>
       <label class="block"><span class="text-dim text-[.72rem]">限定地點</span>
-        <input id="ePl" class="field mt-1" placeholder="例：香港迪士尼、首爾、東京晴空塔"></label>
+        <input id="ePlace" class="field mt-1" placeholder="例：香港迪士尼、首爾、東京晴空塔"></label>
     </div>
     <div class="grid grid-cols-2 gap-3">
       <label class="block"><span class="text-dim text-[.72rem]">定價（日圓）</span><input id="ePrice" type="number" class="field mt-1" placeholder="1650"></label>
@@ -423,113 +438,75 @@ tailwind.config = {
 
 <script>
 /* ══════════════════════════════════════════════════════════
-   標籤字典 —— 全部用香港叫法
-   覺得邊個名唔啱就喺呢度改，成個 app 同分段都會跟住變。
-   n = 顯示名　ja = 日文原名　alt = 其他叫法（淨係用嚟搵嘢）
-   c1/c2 = 冇圖時嘅底色　g = 代表字
+   配色同顯示設定
+   角色、系列、分類嘅名全部由官網繁中直接抓返嚟，唔喺呢度寫死 ——
+   官網出新角色新系列，下次 Action 就自動有。
+   呢度淨係擺「冇相時用咩色」同「大類點排」。
 ════════════════════════════════════════════════════════════ */
-const CHARS = {
-  chiikawa:  { n:'吉伊卡哇', ja:'ちいかわ',       alt:'小可愛 Chiikawa',        c1:'#FFF3D6', c2:'#E8C98A', g:'吉' },
-  hachiware: { n:'小八',     ja:'ハチワレ',       alt:'八貓 Hachiware',          c1:'#D8F0FF', c2:'#8FC4E8', g:'八' },
-  usagi:     { n:'兔兔',     ja:'うさぎ',         alt:'烏薩奇 Usagi',            c1:'#FFF0C9', c2:'#EFC65C', g:'兔' },
-  momonga:   { n:'飛鼠',     ja:'モモンガ',       alt:'小桃 Momonga',            c1:'#FFE3EE', c2:'#F0A5C4', g:'鼠' },
-  kurimanju: { n:'栗子饅頭', ja:'くりまんじゅう', alt:'栗饅 Kurimanju',          c1:'#F5DEC2', c2:'#C89563', g:'栗' },
-  rakko:     { n:'師父',     ja:'ラッコ',         alt:'海獺 獺師父 Rakko',       c1:'#E6D9CC', c2:'#A88B73', g:'師' },
-  shisa:     { n:'獅獅',     ja:'シーサー',       alt:'風獅爺 Shisa',            c1:'#FFE0D0', c2:'#E89A76', g:'獅' },
-  furuhonya: { n:'古本木',   ja:'古本屋',         alt:'舊書店 二手書店 Furuhonya',c1:'#DCD6EE', c2:'#9A8EC4', g:'古' },
-  anoko:     { n:'那個細路', ja:'あのこ',         alt:'嗰個細路 Anoko',          c1:'#E4EEDC', c2:'#9DBA8C', g:'那' },
-  dekatsuyo: { n:'大又強',   ja:'でかつよ',       alt:'大強 Dekatsuyo',          c1:'#E8E2D6', c2:'#B0A48E', g:'強' },
-  ode:       { n:'歐帝',     ja:'オデ',           alt:'Ode',                     c1:'#F0E2D2', c2:'#C0A183', g:'歐' },
-  chimaera:  { n:'奇美拉',   ja:'キメラ',         alt:'Chimaera',                c1:'#DDD2E8', c2:'#9484AF', g:'奇' },
-  yoroisan:  { n:'鎧甲先生', ja:'鎧さん',         alt:'鎧甲 Yoroi',              c1:'#D9DEE6', c2:'#8A93A3', g:'鎧' },
-  beetle:    { n:'甲蟲',     ja:'カブトムシ',     alt:'獨角仙 Beetle',           c1:'#D6DCC8', c2:'#8B9470', g:'甲' },
-  goblin:    { n:'哥布林',   ja:'ゴブリン',       alt:'Goblin',                  c1:'#D4E4DA', c2:'#84A895', g:'哥' },
-  star:      { n:'星星',     ja:'星',             alt:'Star',                    c1:'#FFF6D2', c2:'#E5CE7A', g:'星' },
-  muchauman: { n:'好味超人', ja:'むちゃうマン',   alt:'Muchauman',               c1:'#FFDDD6', c2:'#DD8E7C', g:'味' },
-  siren:     { n:'賽蓮',     ja:'セイレーン',     alt:'塞壬 海妖 Siren',         c1:'#D4E8F2', c2:'#7FADC2', g:'賽' },
-  ningyo:    { n:'人魚',     ja:'人魚',           alt:'美人魚 Mermaid',          c1:'#CFE6E4', c2:'#75AAA8', g:'魚' },
-  shimajiro: { n:'島次郎',   ja:'シマジロウ',     alt:'Shimajiro',               c1:'#E8E0D0', c2:'#B09E7E', g:'島' },
-  bird:      { n:'「鳥」',   ja:'「鳥」',         alt:'Bird',                    c1:'#E0E6EE', c2:'#93A0B2', g:'鳥' },
-  mixed:     { n:'大合集',   ja:'いろいろ',       alt:'全員 合集',               c1:'#EADFEE', c2:'#A98FB4', g:'合' },
+
+/* 認得嘅角色用固定色，認唔得嘅會按個名 hash 出一隻柔和色，
+   所以新角色一樣有色，唔會變灰口灰面。 */
+const PALETTE = {
+  '吉伊卡哇':   ['#FFF3D6', '#E8C98A'],
+  '小八':       ['#D8F0FF', '#8FC4E8'],
+  '兔兔':       ['#FFF0C9', '#EFC65C'],
+  '飛鼠':       ['#FFE3EE', '#F0A5C4'],
+  '栗子饅頭':   ['#F5DEC2', '#C89563'],
+  '師父':       ['#E6D9CC', '#A88B73'],
+  '獅獅':       ['#FFE0D0', '#E89A76'],
+  '古本木':     ['#DCD6EE', '#9A8EC4'],
+  '那個細路':   ['#E4EEDC', '#9DBA8C'],
+  '大又強':     ['#E8E2D6', '#B0A48E'],
+  '歐帝':       ['#F0E2D2', '#C0A183'],
+  '奇美拉':     ['#DDD2E8', '#9484AF'],
+  '鎧甲先生':   ['#D9DEE6', '#8A93A3'],
+  '甲蟲':       ['#D6DCC8', '#8B9470'],
+  '哥布林':     ['#D4E4DA', '#84A895'],
+  '星星':       ['#FFF6D2', '#E5CE7A'],
+  '好味超人':   ['#FFDDD6', '#DD8E7C'],
+  '賽蓮':       ['#D4E8F2', '#7FADC2'],
+  '人魚':       ['#CFE6E4', '#75AAA8'],
+  '島次郎':     ['#E8E0D0', '#B09E7E'],
 };
 
-/* 發行地區 —— 香港／台灣／大陸／韓國／澳門版分得清楚 */
-const REGIONS = {
-  jp:       '日本',
-  jp_local: '日本地區限定',
-  hk:       '香港',
-  tw:       '台灣',
-  cn:       '中國大陸',
-  kr:       '韓國',
-  mo:       '澳門',
-  sea:      '東南亞',
-  other:    '其他海外',
+/* 官方譯名同你順口嗰個唔同嘅，擺喺呢度 —— 顯示會用右邊，
+   但搵嘢兩邊都搵得到。官網改咗名都唔使驚，對唔上就原樣顯示。 */
+const RENAME = {
+  '烏薩奇': '兔兔',
+  '小桃': '飛鼠',
+  '小桃鼠': '飛鼠',
+  '海獺': '師父',
+  '海獺勇者': '師父',
+  '古本屋': '古本木',
+  '舊書店': '古本木',
+  '小八貓': '小八',
+  '風獅爺': '獅獅',
+  '塞壬': '賽蓮',
 };
 
-const SERIES = {
-  standard:    '基本款',
-  gotochi:     '地區限定（ご当地）',
-  park:        '吉伊卡哇公園',
-  movie:       '吉伊卡哇電影版',
-  suppaiman:   '×酸梅超人',
-  bakery:      '吉伊卡哇麵包店',
-  magical:     '魔法吉伊卡哇',
-  tenshi:      '天使♡惡魔',
-  sanrio:      '×Sanrio',
-  aquarium:    '吉伊卡哇水族館',
-  hanten:      '吉伊卡哇飯店',
-  restaurant:  '吉伊卡哇餐廳',
-  tokyomiyage: '東京手信',
-  baby:        'Chiikawa Baby',
-  sushi:       '吉伊卡哇壽司',
-  ramenbuta:   '吉伊卡哇拉麵豚',
-  parallel:    '平行世界！？',
-  yuenchi:     '開心遊樂場',
-  land:        '吉伊卡哇樂園',
-  shisamatsuri:'獅獅祭',
-  mlb:         '×MLB 東京系列賽',
-  giants:      '×讀賣巨人',
-  hankyu:      '×阪急電車',
-  odekake:     '出街好開心！',
-  popup:       '期間限定店',
-  kuji:        '一番賞・抽獎',
-};
-
-const CATS = {
-  plush:      '公仔',
-  mascot:     '掛飾公仔',
-  keyring:    '鎖匙扣',
-  plate:      '鐵牌・磁石牌',
-  badge:      '襟章',
-  acrylic:    '亞加力企牌',
-  figure:     '模型',
-  stationery: '文具',
-  apparel:    'T恤・衫褲',
-  socks:      '襪',
-  hat:        '帽',
-  bag:        '袋・散紙包',
-  towel:      '毛巾',
-  kitchen:    '杯碟餐具',
-  phone:      '手機周邊',
-  interior:   '攬枕・床品',
-  food:       '零食',
-  toy:        '玩具・砌圖',
-  luckybag:   '福袋',
-  other:      '其他',
-};
+/* 大類排位（冇列到嘅排最後，按件數） */
+const MAIN_ORDER = [
+  '公仔・吊飾', '地區限定・鐵牌', '雜貨小物', '玩具・收藏',
+  '衫褲鞋襪', '文具・紙品', '家居・生活', '電子・手機',
+  '食品', '戶外・旅行', '其他',
+];
 
 /* 圖鑑內容由 GitHub Action 抓官網寫入 catalog.json，開頁自動載入。
-   manual.json 係你自己維護嗰份（香港／台灣／大陸／韓國／澳門限定、
-   一番賞賞品等等），Action 唔會掂，會 merge 埋落圖鑑。 */
+   manual.json 係你自己維護嗰份（港／台／陸／韓／澳限定、一番賞），
+   Action 永遠唔會覆蓋，app 會 merge 埋。 */
 const BUILTIN = [];
 
 </script>
 <script>
 /* ══════════════════════════════════════════════════════════
-   吉伊卡哇 周邊圖鑑 — 狀態同畫面
-   儲存位置：localStorage（呢部機、呢個瀏覽器）
+   吉伊卡哇 周邊圖鑑
+   資料格式（catalog.json / manual.json 每一件）：
+     id name name_ja character theme main_category sub_category
+     region place release_date price type image image_remote url first_seen
+   character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
-const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom', K_UI = 'ck.ui';
+const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
+      K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
 
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -543,51 +520,130 @@ const write = (k, v) => {
     return false;
   }
 };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-let CATALOG = [];
+let CATALOG = [], OPTS = {};
 let COL = read(K_COL, {});
-let UI = Object.assign({ cols: 4, group: 'se', view: 'all', closed: {} }, read(K_UI, {}));
+let UI = Object.assign({ cols: 4, group: 'theme', view: 'all', closed: {} }, read(K_UI, {}));
 UI.cols = Math.min(8, Math.max(3, +UI.cols || 4));
-let F = { q: '' };
+let F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
 let editingId = null;
 
-/* ── 圖鑑組裝 ──────────────────────────────────────────── */
-function loadCatalog() {
-  const imported = read(K_CAT, null);
-  const custom = read(K_CUSTOM, []);
-  const base = Array.isArray(imported) && imported.length ? imported : BUILTIN;
-  const seen = new Set(base.map(x => x.id));
-  CATALOG = [...base, ...custom.filter(x => !seen.has(x.id))].map(x => ({
+/* ── 角色字串 → 陣列（逗號分隔，去空白，套用譯名）──────── */
+const splitChars = s => String(s || '')
+  .split(/[,，、]/).map(x => x.trim()).filter(Boolean)
+  .map(x => RENAME[x] || x);
+
+const colorOf = name => {
+  if (PALETTE[name]) return PALETTE[name];
+  if (!name) return ['#EADFEE', '#A98FB4'];
+  let h = 0; for (const ch of name) h = (h * 31 + ch.codePointAt(0)) % 360;
+  return [`hsl(${h} 62% 90%)`, `hsl(${h} 45% 66%)`];
+};
+
+/* ── 圖鑑組裝：custom 覆蓋同 id 嘅官網資料 ───────────────── */
+function normalize(x) {
+  const character = splitChars(x.character).join(', ');
+  return {
     ...x,
-    ch: Array.isArray(x.ch) && x.ch.length ? x.ch : ['mixed'],
-    se: x.se || 'standard', ca: x.ca || 'other', t: x.t || 'g',
-    n: x.n || x.title || '(未命名)', d: x.d || '', p: +x.p || 0,
-    rg: x.rg || 'jp', pl: x.pl || '',
-  }));
-  $('#catalogInfo').textContent =
-    `現時 ${CATALOG.length} 件　·　${Array.isArray(imported) && imported.length ? '已匯入官網資料' : '內建種子資料'}` +
-    (custom.length ? `　·　自訂 ${custom.length} 件` : '');
+    id: String(x.id),
+    name: x.name || x.name_ja || '(未命名)',
+    name_ja: x.name_ja || '',
+    character,
+    theme: x.theme || '基本款',
+    main_category: x.main_category || '其他',
+    sub_category: x.sub_category || '其他',
+    region: x.region || '日本',
+    place: x.place || '',
+    release_date: x.release_date || '',
+    price: +x.price || 0,
+    type: x.type || 'goods',
+    image: x.image || '', image_remote: x.image_remote || '',
+    url: x.url || '', first_seen: x.first_seen || '',
+  };
 }
 
+function loadCatalog() {
+  const base = read(K_CAT, null);
+  const custom = read(K_CUSTOM, []);
+  const over = new Map(custom.map(x => [String(x.id), x]));
+  const arr = (Array.isArray(base) && base.length ? base : BUILTIN)
+    .map(x => over.get(String(x.id)) ?? x);
+  const seen = new Set(arr.map(x => String(x.id)));
+  CATALOG = [...arr, ...custom.filter(x => !seen.has(String(x.id)))].map(normalize);
+  buildOptions();
+  $('#catalogInfo').textContent =
+    `現時 ${CATALOG.length} 件　·　${Array.isArray(base) && base.length ? '已載入官網資料' : '未有圖鑑資料'}` +
+    (custom.length ? `　·　自訂／改過 ${custom.length} 件` : '');
+}
+
+/* ── 動態產生篩選選項：全部由資料本身抽出嚟、去重 ─────────
+   角色要逗號 split 之後先去重，因為一件嘢可以有幾個角色。 */
+function buildOptions() {
+  const uniq = f => [...new Set(CATALOG.map(x => x[f]).filter(Boolean))];
+  OPTS = {
+    char: [...new Set(CATALOG.flatMap(x => splitChars(x.character)))].sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+    main: uniq('main_category').sort((a, b) => {
+      const i = MAIN_ORDER.indexOf(a), j = MAIN_ORDER.indexOf(b);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || a.localeCompare(b, 'zh-Hant');
+    }),
+    sub: uniq('sub_category').sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+    theme: uniq('theme').sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+    region: uniq('region').sort((a, b) => a.localeCompare(b, 'zh-Hant')),
+  };
+
+  const count = (f, v) => f === 'char'
+    ? CATALOG.filter(x => splitChars(x.character).includes(v)).length
+    : CATALOG.filter(x => x[{ main: 'main_category', sub: 'sub_category', theme: 'theme', region: 'region' }[f]] === v).length;
+
+  const fill = (sel, key, allLabel) => {
+    const el = $(sel), keep = F[key];
+    el.replaceChildren();
+    const a = document.createElement('option'); a.value = ''; a.textContent = allLabel;
+    el.appendChild(a);
+    for (const v of OPTS[key]) {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = `${v}（${count(key, v)}）`;
+      el.appendChild(o);
+    }
+    el.value = OPTS[key].includes(keep) ? keep : (F[key] = '');
+  };
+  fill('#fChar', 'char', '所有角色');
+  fill('#fMain', 'main', '所有大類');
+  fill('#fSub', 'sub', '所有細類');
+  fill('#fTheme', 'theme', '所有系列');
+  fill('#fRegion', 'region', '所有地區');
+
+  // 編輯器嘅輸入提示
+  const dl = (id, arr) => $(id).replaceChildren(...arr.map(v => {
+    const o = document.createElement('option'); o.value = v; return o;
+  }));
+  dl('#charList', OPTS.char); dl('#themeList', OPTS.theme);
+  dl('#mainList', OPTS.main); dl('#subList', OPTS.sub); dl('#rgList', OPTS.region);
+}
+
+/* ── 收藏狀態 ─────────────────────────────────────────── */
 const st = id => (COL[id]?.s ?? 0);
 const qty = id => (COL[id]?.q ?? 1);
-const isNew = it => it.fs && (Date.now() - Date.parse(it.fs)) < 14 * 864e5;
-
-/* 每次改動都留低時間戳。狀態改返「未入手」唔會刪走個 key —— 留住佢
-   先至可以話俾另一部機知「呢件係我除返低嘅，唔係未同步」。 */
+const isNew = it => it.first_seen && (Date.now() - Date.parse(it.first_seen)) < 14 * 864e5;
 function touch(id) { const c = COL[id] || {}; c.u = Date.now(); COL[id] = c; return c; }
-
 function setState(id, s) {
-  const c = touch(id);
-  c.s = s; if (s && !c.q) c.q = 1;
-  write(K_COL, COL);
-  refresh();
+  const c = touch(id); c.s = s; if (s && !c.q) c.q = 1;
+  write(K_COL, COL); refresh();
 }
 
-/* ── 揀出要顯示嘅 ──────────────────────────────────────── */
+/* ── 多維度篩選：幾個條件同時揀就取交集 ─────────────────── */
 function filtered() {
   const q = F.q.trim().toLowerCase();
   return CATALOG.filter(it => {
+    // 角色：一件嘢可以有幾個，所以用 includes 唔用 ===
+    if (F.char && !splitChars(it.character).includes(F.char)) return false;
+    if (F.main && it.main_category !== F.main) return false;
+    if (F.sub && it.sub_category !== F.sub) return false;
+    if (F.theme && it.theme !== F.theme) return false;
+    if (F.region && it.region !== F.region) return false;
+
     const s = st(it.id);
     switch (UI.view) {
       case 'own':  if (s !== 1) return false; break;
@@ -597,8 +653,8 @@ function filtered() {
       case 'new':  if (!isNew(it)) return false; break;
     }
     if (q) {
-      const hay = [it.n, it.ja, it.ks, it.pr, it.pl, SERIES[it.se], CATS[it.ca], REGIONS[it.rg],
-                   ...it.ch.flatMap(c => [CHARS[c]?.n, CHARS[c]?.ja, CHARS[c]?.alt])]
+      const hay = [it.name, it.name_ja, it.character, it.theme, it.main_category,
+                   it.sub_category, it.region, it.place, it.kuji, it.prize]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -606,7 +662,8 @@ function filtered() {
   });
 }
 
-/* ── 分段：一段一個標題，段內按發售日新→舊 ─────────────── */
+/* ── 分段 ─────────────────────────────────────────────── */
+const GROUP_FIELD = { theme: 'theme', main: 'main_category', sub: 'sub_category', region: 'region' };
 function groupsOf(list) {
   const g = new Map();
   const put = (k, label, it) => {
@@ -614,71 +671,81 @@ function groupsOf(list) {
     g.get(k).items.push(it);
   };
   for (const it of list) {
-    if (UI.group === 'ch') it.ch.forEach(c => put('ch:' + c, CHARS[c]?.n || c, it));
-    else if (UI.group === 'ca') put('ca:' + it.ca, CATS[it.ca] || it.ca, it);
-    else if (UI.group === 'rg') put('rg:' + (it.rg || 'jp'), REGIONS[it.rg] || REGIONS.jp, it);
-    else if (UI.group === 'place') put('pl:' + (it.pl || 'x'), it.pl || '冇指定地點', it);
-    else if (UI.group === 'month') {
-      const m = (it.d || '').slice(0, 7);
+    if (UI.group === 'char') {
+      const cs = splitChars(it.character);
+      if (!cs.length) put('char:—', '冇指定角色', it);
+      else cs.forEach(c => put('char:' + c, c, it));
+    } else if (UI.group === 'place') {
+      put('place:' + (it.place || '—'), it.place || '冇指定地點', it);
+    } else if (UI.group === 'month') {
+      const m = (it.release_date || '').slice(0, 7);
       put('m:' + (m || 'x'), m ? m.replace('-', ' 年 ') + ' 月' : '發售日未定', it);
-    } else put('se:' + it.se, SERIES[it.se] || it.se, it);
+    } else {
+      const f = GROUP_FIELD[UI.group] || 'theme';
+      put(UI.group + ':' + it[f], it[f] || '未分類', it);
+    }
   }
   const out = [...g.values()];
   for (const s of out) {
-    s.items.sort((a, b) => (b.d || '').localeCompare(a.d || ''));
-    s.newest = s.items[0]?.d || '';
+    s.items.sort((a, b) => (b.release_date || '').localeCompare(a.release_date || ''));
+    s.newest = s.items[0]?.release_date || '';
     s.own = s.items.filter(i => st(i.id) === 1).length;
   }
-  // 段與段之間：最新嗰件排前
-  out.sort((a, b) => b.newest.localeCompare(a.newest) || b.items.length - a.items.length);
+  if (UI.group === 'main') {
+    out.sort((a, b) => {
+      const i = MAIN_ORDER.indexOf(a.label), j = MAIN_ORDER.indexOf(b.label);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || b.items.length - a.items.length;
+    });
+  } else {
+    out.sort((a, b) => b.newest.localeCompare(a.newest) || b.items.length - a.items.length);
+  }
   return out;
 }
 
 /* ── 圖鑑格 ───────────────────────────────────────────── */
 function card(it) {
   const s = st(it.id), q = qty(it.id), c = COL[it.id] || {};
-  const main = CHARS[it.ch[0]] || CHARS.mixed;
-  const src = c.ph || it.img;
+  const cs = splitChars(it.character);
+  const [c1, c2] = colorOf(cs[0]);
+  const src = c.ph || it.image || it.image_remote;
   const el = document.createElement('button');
   el.className = 'slot' + (src ? '' : ' noimg');
   el.dataset.own = s;
-  el.style.setProperty('--c1', main.c1);
-  el.style.setProperty('--c2', main.c2);
-  el.setAttribute('aria-label', it.n + '（' + ['未入手', '已入手', '想要'][s] + '）');
+  el.style.setProperty('--c1', c1);
+  el.style.setProperty('--c2', c2);
+  el.setAttribute('aria-label', it.name + '（' + ['未入手', '已入手', '想要'][s] + '）');
 
   const seal = s === 1 ? `<span class="seal${q > 1 ? ' dup' : ''}">✓</span>`
              : s === 2 ? `<span class="seal want">♡</span>` : '';
-  const qbadge = s === 1 && q > 1 ? `<span class="qty">×${q}</span>` : '';
-  const nb = isNew(it) ? `<span class="qty !border-mint !text-mint">新</span>` : '';
-  const kb = it.t === 'k' ? `<span class="kujibadge">${esc(it.pr || 'くじ')}</span>` : '';
-  const pm = c.ph ? `<span class="photomark">📷</span>` : '';
+  const badges = (isNew(it) ? `<span class="qty !border-mint !text-mint">新</span>` : '')
+               + (s === 1 && q > 1 ? `<span class="qty">×${q}</span>` : '');
+  const kb = it.type === 'kuji' ? `<span class="kujibadge">${esc(it.prize || 'くじ')}</span>` : '';
 
   el.innerHTML = `
     <div class="shot">
-      ${seal}${kb}${pm}
-      <div class="absolute top-2 left-2 z-[2] flex flex-col gap-1 items-start">${nb}${qbadge}</div>
-      <div class="fallback"><b>${esc(main.g)}</b><span>${esc(CATS[it.ca] || '')}</span></div>
-      ${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${it.imgr && !c.ph ? ` data-alt="${esc(it.imgr)}"` : ''}>` : ''}
+      ${seal}${kb}${c.ph ? '<span class="photomark">📷</span>' : ''}
+      <div class="absolute top-2 left-2 z-[2] flex flex-col gap-1 items-start">${badges}</div>
+      <div class="fallback"><b>${esc((cs[0] || it.main_category || '？')[0])}</b><span>${esc(it.sub_category)}</span></div>
+      ${src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"${
+        it.image_remote && src !== it.image_remote && !c.ph ? ` data-alt="${esc(it.image_remote)}"` : ''}>` : ''}
     </div>
-    <div class="meta p-[10px] flex flex-col gap-[6px] flex-1">
-      <div class="font-round font-bold text-[.8rem] leading-[1.35] line-clamp-3">${esc(it.n)}</div>
-      ${it.t === 'k' && it.ks ? `<div class="text-sky text-[.66rem]">${esc(it.ks)}</div>` : ''}
+    <div class="meta p-[.625rem] flex flex-col gap-[.375rem] flex-1">
+      <div class="font-round font-bold text-[.8rem] leading-[1.35] line-clamp-3">${esc(it.name)}</div>
+      ${it.type === 'kuji' && it.kuji ? `<div class="text-sky text-[.66rem]">${esc(it.kuji)}</div>` : ''}
       <div class="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span class="text-dim text-[.66rem]">${it.d ? esc(it.d) : '日期待補'}</span>
-        <span class="text-[.7rem] font-bold ${s === 1 ? 'text-gold' : 'text-dim'}">${it.p ? '¥' + it.p.toLocaleString() : ''}</span>
+        <span class="text-dim text-[.66rem]">${it.release_date ? esc(it.release_date) : '日期待補'}</span>
+        <span class="text-[.7rem] font-bold ${s === 1 ? 'text-gold' : 'text-dim'}">${it.price ? '¥' + it.price.toLocaleString() : ''}</span>
       </div>
-      <div class="flex flex-wrap gap-[4px]">
-        ${it.ch.slice(0, 2).map(c2 => `<span class="chip ch">${esc(CHARS[c2]?.n || c2)}</span>`).join('')}
-        ${it.rg && it.rg !== 'jp' ? `<span class="chip rg">${esc(REGIONS[it.rg] || it.rg)}</span>` : ''}
-        ${it.pl ? `<span class="chip rg">${esc(it.pl)}</span>` : ''}
-        <span class="chip se">${esc(SERIES[it.se] || it.se)}</span>
-        <span class="chip ca">${esc(CATS[it.ca] || it.ca)}</span>
+      <div class="flex flex-wrap gap-[.25rem]">
+        ${cs.slice(0, 2).map(x => `<span class="chip ch">${esc(x)}</span>`).join('')}
+        ${it.region !== '日本' ? `<span class="chip rg">${esc(it.region)}</span>` : ''}
+        ${it.place ? `<span class="chip rg">${esc(it.place)}</span>` : ''}
+        <span class="chip ca">${esc(it.sub_category)}</span>
       </div>
     </div>`;
 
   const img = el.querySelector('img');
   if (img) img.addEventListener('error', () => {
-    // 本地備份揾唔到 → 試官網原圖 → 都冇就出角色色塊
     const alt = img.dataset.alt;
     if (alt) { img.removeAttribute('data-alt'); img.src = alt; return; }
     el.classList.add('noimg'); img.remove();
@@ -687,11 +754,8 @@ function card(it) {
   return el;
 }
 
-const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-
 /* ── 主畫面 ───────────────────────────────────────────── */
-const SEC_PAGE = 60;          // 每段先畫咁多件，餘下撳「再顯示」
+const SEC_PAGE = 60;
 let io = null;
 
 function refresh() {
@@ -702,7 +766,6 @@ function refresh() {
   io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); fillSection(e.target); }
   }, { rootMargin: '500px 0px' });
-
   for (const g of groupsOf(list)) host.appendChild(sectionEl(g));
 
   $('#empty').classList.toggle('hidden', list.length > 0 || !CATALOG.length);
@@ -720,10 +783,9 @@ function refresh() {
   const rb = $('#ribbon'); rb.replaceChildren();
   const fr = document.createDocumentFragment();
   for (const it of list.slice(0, 360)) {
-    const i = document.createElement('i');
-    const s = st(it.id);
+    const i = document.createElement('i'); const s = st(it.id);
     if (s === 1) i.className = 'on'; else if (s === 2) i.className = 'want';
-    i.title = it.n; fr.appendChild(i);
+    i.title = it.name; fr.appendChild(i);
   }
   rb.appendChild(fr);
 
@@ -746,7 +808,6 @@ function sectionEl(g) {
       <div class="dexgrid" style="--cols:${UI.cols}"></div>
       <button class="secmore hidden btn btn-ghost w-full mt-3"></button>
     </div>`;
-
   sec.querySelector('.sechead').onclick = () => {
     const now = !UI.closed[g.k];
     UI.closed[g.k] = now; write(K_UI, UI);
@@ -756,14 +817,12 @@ function sectionEl(g) {
     if (!now && !sec._shown) fillSection(sec);
   };
   sec.querySelector('.secmore').onclick = () => fillSection(sec);
-
   if (!closed) io.observe(sec);
   return sec;
 }
 
 function fillSection(sec) {
-  const g = sec._g;
-  const grid = sec.querySelector('.dexgrid');
+  const g = sec._g, grid = sec.querySelector('.dexgrid');
   const slice = g.items.slice(sec._shown, sec._shown + SEC_PAGE);
   grid.append(...slice.map(card));
   sec._shown += slice.length;
@@ -777,14 +836,16 @@ function fillSection(sec) {
 function openDetail(id) {
   const it = CATALOG.find(x => x.id === id); if (!it) return;
   const c = COL[id] || {}, s = st(id), q = qty(id), logs = c.logs || [];
-  const main = CHARS[it.ch[0]] || CHARS.mixed;
-  const src = c.ph || it.img;
+  const cs = splitChars(it.character);
+  const [c1, c2] = colorOf(cs[0]);
+  const src = c.ph || it.image || it.image_remote;
 
   $('#detailBody').innerHTML = `
     <div class="relative">
-      <div class="aspect-[4/3] bg-ink overflow-hidden relative" style="--c1:${main.c1};--c2:${main.c2}">
-        <div class="absolute inset-0 grid place-items-center" style="background:radial-gradient(circle at 50% 40%, var(--c1), var(--c2))" id="dFall">
-          <b class="font-round text-[4rem] font-black" style="color:rgba(27,22,34,.7)">${esc(main.g)}</b>
+      <div class="aspect-[4/3] bg-ink overflow-hidden relative">
+        <div class="absolute inset-0 grid place-items-center"
+             style="background:radial-gradient(circle at 50% 40%, ${c1}, ${c2})">
+          <b class="font-round text-[4rem] font-black" style="color:rgba(40,30,20,.66)">${esc((cs[0] || '？')[0])}</b>
         </div>
         ${src ? `<img id="dImg" src="${esc(src)}" alt="" referrerpolicy="no-referrer" class="relative w-full h-full object-contain">` : ''}
       </div>
@@ -793,23 +854,22 @@ function openDetail(id) {
 
     <div class="p-5 space-y-4">
       <div>
-        <h3 class="font-round font-bold text-[1.05rem] leading-snug">${esc(it.n)}</h3>
-        ${it.ja ? `<p class="text-dim text-[.76rem] mt-1">${esc(it.ja)}</p>` : ''}
-        ${it.t === 'k' ? `<p class="text-sky text-[.78rem] mt-1">${esc(it.ks || '')}${it.pr ? '　' + esc(it.pr) : ''}</p>` : ''}
+        <h3 class="font-round font-bold text-[1.05rem] leading-snug">${esc(it.name)}</h3>
+        ${it.name_ja && it.name_ja !== it.name ? `<p class="text-dim text-[.76rem] mt-1">${esc(it.name_ja)}</p>` : ''}
+        ${it.type === 'kuji' ? `<p class="text-sky text-[.78rem] mt-1">${esc(it.kuji || '')}${it.prize ? '　' + esc(it.prize) : ''}</p>` : ''}
       </div>
 
-      <div class="flex flex-wrap gap-[5px]">
-        ${it.ch.map(x => `<span class="chip ch">${esc(CHARS[x]?.n || x)}</span>`).join('')}
-        <span class="chip rg">${esc(REGIONS[it.rg] || REGIONS.jp)}</span>
-        ${it.pl ? `<span class="chip rg">${esc(it.pl)}</span>` : ''}
-        <span class="chip se">${esc(SERIES[it.se] || it.se)}</span>
-        <span class="chip ca">${esc(CATS[it.ca] || it.ca)}</span>
+      <div class="flex flex-wrap gap-[.3rem]">
+        ${cs.map(x => `<span class="chip ch">${esc(x)}</span>`).join('')}
+        <span class="chip rg">${esc(it.region)}</span>
+        ${it.place ? `<span class="chip rg">${esc(it.place)}</span>` : ''}
+        <span class="chip se">${esc(it.theme)}</span>
+        <span class="chip ca">${esc(it.main_category)} · ${esc(it.sub_category)}</span>
       </div>
 
       <dl class="grid grid-cols-2 gap-y-2 text-[.8rem]">
-        <dt class="text-dim">發售日期</dt><dd>${it.d ? esc(it.d) : '—'}</dd>
-        <dt class="text-dim">定價</dt><dd>${it.p ? '¥' + it.p.toLocaleString() : '—'}</dd>
-        <dt class="text-dim">發行地區</dt><dd>${esc(REGIONS[it.rg] || REGIONS.jp)}${it.pl ? '・' + esc(it.pl) : ''}</dd>
+        <dt class="text-dim">發售日期</dt><dd>${it.release_date ? esc(it.release_date) : '—'}</dd>
+        <dt class="text-dim">定價</dt><dd>${it.price ? '¥' + it.price.toLocaleString() : '—'}</dd>
         <dt class="text-dim">編號</dt><dd class="font-mono text-[.72rem]">${esc(it.id)}</dd>
       </dl>
 
@@ -826,7 +886,7 @@ function openDetail(id) {
           <button class="btn btn-ghost !px-3" id="qMinus">−</button>
           <span class="font-round font-bold w-6 text-center">${q}</span>
           <button class="btn btn-ghost !px-3" id="qPlus">＋</button>
-          ${q > 1 ? '<span class="text-mint text-[.72rem]">有 ' + (q - 1) + ' 隻重複</span>' : ''}
+          ${q > 1 ? `<span class="text-mint text-[.72rem]">有 ${q - 1} 隻重複</span>` : ''}
         </div>` : ''}
       </div>
 
@@ -837,23 +897,20 @@ function openDetail(id) {
         </div>
         ${c.ph ? `<button class="text-rose text-[.72rem] mb-3" id="rmPhoto">刪走呢張相</button>` : ''}
         <div class="grid grid-cols-2 gap-2">
-          <label class="block col-span-1"><span class="text-dim text-[.7rem]">日期</span>
+          <label class="block"><span class="text-dim text-[.7rem]">日期</span>
             <input id="lDate" type="date" class="field mt-1" value="${new Date().toISOString().slice(0, 10)}"></label>
-          <label class="block col-span-1"><span class="text-dim text-[.7rem]">實付（¥）</span>
-            <input id="lPrice" type="number" class="field mt-1" placeholder="${it.p || ''}"></label>
+          <label class="block"><span class="text-dim text-[.7rem]">實付（¥）</span>
+            <input id="lPrice" type="number" class="field mt-1" placeholder="${it.price || ''}"></label>
           <label class="block col-span-2"><span class="text-dim text-[.7rem]">入手地點</span>
-            <input id="lPlace" class="field mt-1" placeholder="例：ちいかわらんど 東京駅"></label>
+            <input id="lPlace" class="field mt-1" placeholder="例：吉伊卡哇樂園 東京站"></label>
           <label class="block col-span-2"><span class="text-dim text-[.7rem]">備註</span>
             <input id="lNote" class="field mt-1" placeholder="排咗半個鐘…"></label>
         </div>
         <button class="btn btn-gold w-full mt-3" id="addLog">打卡</button>
-
         ${logs.length ? `<ul class="mt-4 space-y-2">${logs.map((l, i) => `
           <li class="bg-ink border border-ink3 rounded-lg px-3 py-2 text-[.78rem] flex justify-between gap-3">
-            <div>
-              <div class="font-bold">${esc(l.d || '')}${l.pl ? '　' + esc(l.pl) : ''}</div>
-              ${l.no ? `<div class="text-dim text-[.72rem] mt-[2px]">${esc(l.no)}</div>` : ''}
-            </div>
+            <div><div class="font-bold">${esc(l.d || '')}${l.pl ? '　' + esc(l.pl) : ''}</div>
+              ${l.no ? `<div class="text-dim text-[.72rem] mt-[2px]">${esc(l.no)}</div>` : ''}</div>
             <div class="text-right shrink-0">
               ${l.pr ? `<div class="text-gold font-bold">¥${Number(l.pr).toLocaleString()}</div>` : ''}
               <button class="text-dim text-[.68rem] mt-1" data-dellog="${i}">刪除</button>
@@ -863,29 +920,26 @@ function openDetail(id) {
 
       <div class="flex gap-2 pt-1">
         ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener" class="btn btn-ghost flex-1 text-center">官網頁面</a>` : ''}
-        <button class="btn btn-ghost" id="editThis">${isCustom(it.id) ? '編輯 / 刪除' : '編輯'}</button>
+        <button class="btn btn-ghost" id="editThis">${isCustom(it.id) ? '編輯 / 刪除' : '改 tag'}</button>
       </div>
     </div>`;
 
   const dImg = $('#dImg');
   if (dImg) dImg.addEventListener('error', function () {
-    if (!c.ph && it.imgr && dImg.src !== it.imgr) { dImg.src = it.imgr; return; }
+    if (!c.ph && it.image_remote && dImg.src !== it.image_remote) { dImg.src = it.image_remote; return; }
     dImg.remove();
   });
-
   $('#dClose').onclick = () => $('#detail').close();
   $$('#detailBody [data-set]').forEach(b => b.onclick = () => { setState(id, +b.dataset.set); openDetail(id); });
-  const bump = d => { const c2 = touch(id); c2.q = Math.max(1, (c2.q || 1) + d); write(K_COL, COL); refresh(); openDetail(id); };
+  const bump = d => { const x = touch(id); x.q = Math.max(1, (x.q || 1) + d); write(K_COL, COL); refresh(); openDetail(id); };
   if ($('#qMinus')) $('#qMinus').onclick = () => bump(-1);
   if ($('#qPlus')) $('#qPlus').onclick = () => bump(1);
-
   $('#addLog').onclick = () => {
-    const c2 = touch(id);
-    c2.logs = c2.logs || [];
-    c2.logs.unshift({ d: $('#lDate').value, pl: $('#lPlace').value.trim(), pr: $('#lPrice').value, no: $('#lNote').value.trim() });
-    if (!c2.s) c2.s = 1;
-    if (!c2.q) c2.q = 1;
-    COL[id] = c2; write(K_COL, COL); refresh(); openDetail(id); toast('打咗卡');
+    const x = touch(id);
+    x.logs = x.logs || [];
+    x.logs.unshift({ d: $('#lDate').value, pl: $('#lPlace').value.trim(), pr: $('#lPrice').value, no: $('#lNote').value.trim() });
+    if (!x.s) x.s = 1; if (!x.q) x.q = 1;
+    write(K_COL, COL); refresh(); openDetail(id); toast('打咗卡');
   };
   $$('#detailBody [data-dellog]').forEach(b => b.onclick = () => {
     touch(id).logs.splice(+b.dataset.dellog, 1); write(K_COL, COL); refresh(); openDetail(id);
@@ -893,7 +947,6 @@ function openDetail(id) {
   $('#shootPhoto').onclick = () => pickPhoto(id);
   if ($('#rmPhoto')) $('#rmPhoto').onclick = () => { delete touch(id).ph; write(K_COL, COL); refresh(); openDetail(id); };
   $('#editThis').onclick = () => { $('#detail').close(); openEditor(it); };
-
   $('#detail').showModal();
 }
 
@@ -913,7 +966,6 @@ $('#photoPick').addEventListener('change', e => {
       const c = touch(photoTarget);
       c.ph = cv.toDataURL('image/jpeg', 0.7);
       if (!c.s) { c.s = 1; c.q = 1; }
-      COL[photoTarget] = c;
       if (write(K_COL, COL)) { refresh(); openDetail(photoTarget); toast('相已儲存'); }
       photoTarget = null;
     };
@@ -923,7 +975,7 @@ $('#photoPick').addEventListener('change', e => {
   e.target.value = '';
 });
 
-/* ── 入手紀錄時間線 ───────────────────────────────────── */
+/* ── 入手紀錄 ─────────────────────────────────────────── */
 function renderLogs() {
   const rows = [];
   for (const [id, c] of Object.entries(COL)) {
@@ -931,20 +983,21 @@ function renderLogs() {
     for (const l of (c.logs || [])) rows.push({ it, l, ph: c.ph });
   }
   rows.sort((a, b) => (b.l.d || '').localeCompare(a.l.d || ''));
-  $('#logCount').textContent = rows.length ? `${rows.length} 次　共 ¥${rows.reduce((s, r) => s + (+r.l.pr || 0), 0).toLocaleString()}` : '';
+  $('#logCount').textContent = rows.length
+    ? `${rows.length} 次　共 ¥${rows.reduce((s, r) => s + (+r.l.pr || 0), 0).toLocaleString()}` : '';
   $('#logEmpty').classList.toggle('hidden', rows.length > 0);
   $('#logList').replaceChildren(...rows.map(({ it, l, ph }) => {
-    const main = CHARS[it.ch[0]] || CHARS.mixed;
+    const [c1, c2] = colorOf(splitChars(it.character)[0]);
+    const src = ph || it.image || it.image_remote;
     const d = document.createElement('div');
     d.className = 'bg-ink2 border border-ink3 rounded-xl p-3 flex gap-3 items-center cursor-pointer';
     d.innerHTML = `
       <div class="w-14 h-14 rounded-lg overflow-hidden shrink-0 grid place-items-center"
-           style="background:radial-gradient(circle at 50% 40%, ${main.c1}, ${main.c2})">
-        ${(ph || it.img) ? `<img src="${esc(ph || it.img)}" alt="" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.remove()">`
-          : `<b class="font-round text-xl" style="color:rgba(27,22,34,.7)">${esc(main.g)}</b>`}
+           style="background:radial-gradient(circle at 50% 40%, ${c1}, ${c2})">
+        ${src ? `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer" class="w-full h-full object-cover" onerror="this.remove()">` : ''}
       </div>
       <div class="flex-1 min-w-0">
-        <div class="font-round font-bold text-[.84rem] truncate">${esc(it.n)}</div>
+        <div class="font-round font-bold text-[.84rem] truncate">${esc(it.name)}</div>
         <div class="text-dim text-[.72rem] mt-[2px]">${esc(l.d || '')}${l.pl ? '　·　' + esc(l.pl) : ''}</div>
         ${l.no ? `<div class="text-dim text-[.7rem] mt-[2px] truncate">${esc(l.no)}</div>` : ''}
       </div>
@@ -959,37 +1012,31 @@ function renderStats() {
   const all = CATALOG.length;
   const own = CATALOG.filter(i => st(i.id) === 1);
   const want = CATALOG.filter(i => st(i.id) === 2).length;
-  const dup = own.filter(i => qty(i.id) > 1).length;
   const spent = Object.values(COL).flatMap(c => c.logs || []).reduce((s, l) => s + (+l.pr || 0), 0);
-
   const box = (label, val, cls = '') => `
     <div class="bg-ink2 border border-ink3 rounded-xl p-3">
       <div class="font-round font-black text-[1.4rem] ${cls}">${val}</div>
-      <div class="text-dim text-[.7rem] mt-1">${label}</div>
-    </div>`;
+      <div class="text-dim text-[.7rem] mt-1">${label}</div></div>`;
   $('#statCards').innerHTML =
-    box('已入手', own.length, 'text-gold') +
-    box('未入手', all - own.length - want) +
-    box('想要', want, 'text-rose') +
-    box('累積花費', '¥' + spent.toLocaleString(), 'text-mint');
+    box('已入手', own.length, 'text-gold') + box('未入手', all - own.length - want) +
+    box('想要', want, 'text-rose') + box('累積花費', '¥' + spent.toLocaleString(), 'text-mint');
 
-  const grp = (key, dict, host) => {
-    const keys = Object.keys(dict).filter(k => CATALOG.some(i => key === 'ch' ? i.ch.includes(k) : i[key] === k));
-    const rows = keys.map(k => {
-      const items = CATALOG.filter(i => key === 'ch' ? i.ch.includes(k) : i[key] === k);
+  const grp = (host, values, match) => {
+    const rows = values.map(v => {
+      const items = CATALOG.filter(x => match(x, v));
       const o = items.filter(i => st(i.id) === 1).length;
-      return { label: dict[k].n || dict[k], o, t: items.length, pct: items.length ? o / items.length : 0 };
-    }).sort((a, b) => b.t - a.t);
-    host.innerHTML = rows.map(r => `
+      return { v, o, t: items.length };
+    }).filter(r => r.t).sort((a, b) => b.t - a.t);
+    $(host).innerHTML = rows.map(r => `
       <div class="flex items-center gap-3">
-        <span class="text-[.78rem] w-28 shrink-0 truncate">${esc(r.label)}</span>
-        <div class="bar flex-1"><span style="width:${(r.pct * 100).toFixed(1)}%"></span></div>
+        <span class="text-[.78rem] w-28 shrink-0 truncate">${esc(r.v)}</span>
+        <div class="bar flex-1"><span style="width:${(r.o / r.t * 100).toFixed(1)}%"></span></div>
         <span class="text-dim text-[.72rem] w-16 text-right shrink-0">${r.o}/${r.t}</span>
       </div>`).join('');
   };
-  grp('ch', CHARS, $('#statChar'));
-  grp('se', SERIES, $('#statSeries'));
-  grp('ca', CATS, $('#statCat'));
+  grp('#statChar', OPTS.char || [], (x, v) => splitChars(x.character).includes(v));
+  grp('#statSeries', OPTS.theme || [], (x, v) => x.theme === v);
+  grp('#statCat', OPTS.main || [], (x, v) => x.main_category === v);
 }
 
 function renderQuota() {
@@ -997,80 +1044,78 @@ function renderQuota() {
   for (const k in localStorage) if (Object.hasOwn(localStorage, k)) bytes += (localStorage[k] || '').length * 2;
   const mb = bytes / 1048576, pct = Math.min(100, mb / 5 * 100);
   $('#quotaBar').style.width = pct + '%';
-  $('#quotaBar').style.background = pct > 85 ? '#E68DA0' : '#E8B84B';
-  const photos = Object.values(COL).filter(c => c.ph).length;
-  $('#quotaText').textContent = `用咗約 ${mb.toFixed(2)} MB / 5 MB　·　${photos} 張打卡相`;
+  $('#quotaBar').style.background = pct > 85 ? 'var(--rose)' : 'var(--gold)';
+  $('#quotaText').textContent = `用咗約 ${mb.toFixed(2)} MB / 5 MB　·　${Object.values(COL).filter(c => c.ph).length} 張打卡相`;
 }
 
-/* ── 自訂加入 / 編輯 ──────────────────────────────────── */
-function fillSelect(sel, dict) {
-  sel.replaceChildren(...Object.entries(dict).map(([k, v]) => {
-    const o = document.createElement('option'); o.value = k; o.textContent = v.n || v; return o;
-  }));
-}
+/* ── 自訂加入 / 改 tag / 刪除 ─────────────────────────── */
+const isCustom = id => !!id && read(K_CUSTOM, []).some(x => String(x.id) === String(id));
+const inBase = id => (read(K_CAT, []) || []).some(x => String(x.id) === String(id));
+
 function openEditor(it) {
   editingId = it?.id || null;
-  $('#editorTitle').textContent = it ? '編輯' : '自訂加入一件';
-  $('#eName').value = it?.n || ''; $('#eJa').value = it?.ja || '';
-  $('#eType').value = it?.t || 'g'; $('#eDate').value = it?.d || '';
-  $('#eKs').value = it?.ks || ''; $('#ePr').value = it?.pr || '';
-  $('#ePrice').value = it?.p || ''; $('#eUrl').value = it?.url || ''; $('#eImg').value = it?.img || '';
-  fillSelect($('#eSe'), SERIES); fillSelect($('#eCa'), CATS); fillSelect($('#eRg'), REGIONS);
-  $('#eSe').value = it?.se || 'standard'; $('#eCa').value = it?.ca || 'mascot';
-  $('#eRg').value = it?.rg || 'hk'; $('#ePl').value = it?.pl || '';
-
-  // 淨係自訂加入嘅先刪得，官網抓返嚟嗰啲刪咗都會再抓一次
-  const mine = isCustom(it?.id);
-  $('#editorDelete').classList.toggle('hidden', !mine);
-
-  const picked = new Set(it?.ch || []);
-  $('#eChar').replaceChildren(...Object.entries(CHARS).map(([k, v]) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'tag'; b.textContent = v.n;
-    b.setAttribute('aria-pressed', picked.has(k));
-    b.onclick = () => { picked.has(k) ? picked.delete(k) : picked.add(k); b.setAttribute('aria-pressed', picked.has(k)); };
-    return b;
-  }));
-  $('#editor').dataset.picked = '';
-  $('#editor')._picked = picked;
+  $('#editorTitle').textContent = it ? (isCustom(it.id) ? '編輯' : '改 tag') : '自訂加入一件';
+  $('#eName').value = it?.name || ''; $('#eJa').value = it?.name_ja || '';
+  $('#eType').value = it?.type === 'kuji' ? 'k' : 'g';
+  $('#eDate').value = it?.release_date || '';
+  $('#eKuji').value = it?.kuji || ''; $('#ePrize').value = it?.prize || '';
+  $('#eChar').value = it?.character || '';
+  $('#eTheme').value = it?.theme || '基本款';
+  $('#eMain').value = it?.main_category || '公仔・吊飾';
+  $('#eSub').value = it?.sub_category || '掛飾公仔';
+  $('#eRg').value = it?.region || '香港';
+  $('#ePlace').value = it?.place || '';
+  $('#ePrice').value = it?.price || ''; $('#eUrl').value = it?.url || '';
+  $('#eImg').value = it?.image_remote || it?.image || '';
   $('#kujiFields').style.display = $('#eType').value === 'k' ? '' : 'none';
+  $('#editorDelete').classList.toggle('hidden', !isCustom(it?.id));
+  $('#editorDelete').textContent = inBase(it?.id) ? '還原官網資料' : '刪除';
   $('#editor').showModal();
 }
-$('#eType').addEventListener('change', e => { $('#kujiFields').style.display = e.target.value === 'k' ? '' : 'none'; });
+
+$('#eType').addEventListener('change', e => {
+  $('#kujiFields').style.display = e.target.value === 'k' ? '' : 'none';
+});
 $('#editorCancel').onclick = () => $('#editor').close();
 $('#editorSave').onclick = () => {
   const name = $('#eName').value.trim();
   if (!name) { $('#eName').focus(); return; }
-  const picked = [...($('#editor')._picked || [])];
   const item = {
     id: editingId || 'u-' + Date.now().toString(36),
-    n: name, ja: $('#eJa').value.trim(),
-    ch: picked.length ? picked : ['mixed'],
-    se: $('#eSe').value, ca: $('#eCa').value, t: $('#eType').value,
-    d: $('#eDate').value, p: +$('#ePrice').value || 0,
-    rg: $('#eRg').value, pl: $('#ePl').value.trim(),
-    img: $('#eImg').value.trim(), url: $('#eUrl').value.trim(),
-    ks: $('#eKs').value.trim(), pr: $('#ePr').value.trim(),
+    name, name_ja: $('#eJa').value.trim(),
+    character: splitChars($('#eChar').value).join(', '),
+    theme: $('#eTheme').value.trim() || '基本款',
+    main_category: $('#eMain').value.trim() || '其他',
+    sub_category: $('#eSub').value.trim() || '其他',
+    region: $('#eRg').value.trim() || '日本',
+    place: $('#ePlace').value.trim(),
+    release_date: $('#eDate').value,
+    price: +$('#ePrice').value || 0,
+    type: $('#eType').value === 'k' ? 'kuji' : 'goods',
+    kuji: $('#eKuji').value.trim(), prize: $('#ePrize').value.trim(),
+    image: '', image_remote: $('#eImg').value.trim(),
+    url: $('#eUrl').value.trim(),
+    first_seen: CATALOG.find(x => x.id === editingId)?.first_seen || '',
   };
   const custom = read(K_CUSTOM, []);
-  const i = custom.findIndex(x => x.id === item.id);
+  const i = custom.findIndex(x => String(x.id) === String(item.id));
   if (i >= 0) custom[i] = item; else custom.push(item);
   write(K_CUSTOM, custom);
   loadCatalog(); refresh();
-  $('#editor').close(); toast(editingId ? '已更新' : '已加入圖鑑');
+  $('#editor').close(); toast(editingId ? '改好咗' : '已加入圖鑑');
   editingId = null;
 };
-
-const isCustom = id => !!id && read(K_CUSTOM, []).some(x => x.id === id);
-
 $('#editorDelete').onclick = () => {
   if (!editingId) return;
+  const base = inBase(editingId);
   const it = CATALOG.find(x => x.id === editingId);
-  if (!confirm(`刪走「${it?.n || editingId}」？連埋佢嘅收藏狀態同打卡紀錄一齊冇。`)) return;
-  write(K_CUSTOM, read(K_CUSTOM, []).filter(x => x.id !== editingId));
-  delete COL[editingId]; write(K_COL, COL);
+  if (!confirm(base
+    ? `還原「${it?.name}」做官網原本嘅資料？你改過嘅 tag 會冇咗。`
+    : `刪走「${it?.name}」？連埋佢嘅收藏狀態同打卡紀錄一齊冇。`)) return;
+  write(K_CUSTOM, read(K_CUSTOM, []).filter(x => String(x.id) !== String(editingId)));
+  if (!base) { delete COL[editingId]; write(K_COL, COL); }
   loadCatalog(); refresh();
-  $('#editor').close(); toast('刪咗'); editingId = null;
+  $('#editor').close(); toast(base ? '還原咗' : '刪咗'); editingId = null;
 };
 
 /* ── 匯入匯出 ─────────────────────────────────────────── */
@@ -1088,42 +1133,26 @@ $('#filePick').addEventListener('change', e => {
     let data; try { data = JSON.parse(t) } catch { return toast('讀唔到，唔係有效嘅 JSON') }
     if (pickMode === 'collection') {
       if (typeof data !== 'object' || Array.isArray(data)) return toast('呢個唔似係收藏檔');
-      COL = Object.assign(COL, data); write(K_COL, COL);
-      toast('收藏已匯入（同現有嘅合併）');
+      COL = Object.assign(COL, data); write(K_COL, COL); toast('收藏已匯入（同現有嘅合併）');
     } else {
       const arr = Array.isArray(data) ? data : data.items;
       if (!Array.isArray(arr) || !arr.length) return toast('呢個唔似係圖鑑檔');
-      write(K_CAT, arr); loadCatalog();
-      toast(`圖鑑已更新：${arr.length} 件`);
+      write(K_CAT, arr); loadCatalog(); toast(`圖鑑已更新：${arr.length} 件`);
     }
     refresh();
   });
   e.target.value = '';
 });
 
-/* ── 小工具 ───────────────────────────────────────────── */
-let toastT;
-function toast(msg) {
-  const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2600);
-}
-
-
-/* ══ 同步（Google Sheet + Apps Script）══════════════════════
-   個 Sheet 只係一個郵箱：兩邊都 pull 落嚟、合併、再 push 返上去。
-   同一件兩邊都改過，以時間戳較新嗰次為準；輸咗嗰邊如果有相而贏
-   嗰邊冇，張相照樣保留。
-═════════════════════════════════════════════════════════════ */
-const K_SYNC = 'ck.sync';
-const PH_MAX = 45000;                 // Sheet 一格上限 5 萬字元，留啲位
+/* ── 同步 ─────────────────────────────────────────────── */
+const PH_MAX = 45000;
 let SY = Object.assign({ url: '', key: '', auto: false, last: 0 }, read(K_SYNC, {}));
 
 async function syncCall(action, data, names) {
   if (!SY.url) throw new Error('未填 Apps Script 網址');
   const r = await fetch(SY.url, {
     method: 'POST',
-    // 用 text/plain 係為咗避開 CORS preflight —— Apps Script 唔識答 OPTIONS
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // 避開 CORS preflight
     body: JSON.stringify({ action, key: SY.key, data: data ?? null, names: names || null }),
     redirect: 'follow',
   });
@@ -1132,7 +1161,6 @@ async function syncCall(action, data, names) {
   if (!j.ok) throw new Error(j.error || '未知錯誤');
   return j;
 }
-
 function mergeCol(local, remote) {
   const out = {};
   for (const id of new Set([...Object.keys(local), ...Object.keys(remote)])) {
@@ -1141,40 +1169,30 @@ function mergeCol(local, remote) {
     if (!y) { out[id] = x; continue; }
     const [win, lose] = (y.u || 0) > (x.u || 0) ? [y, x] : [x, y];
     const m = { ...win };
-    if (!m.ph && lose.ph) m.ph = lose.ph;     // 唔好因為輸咗就丟咗張相
+    if (!m.ph && lose.ph) m.ph = lose.ph;
     out[id] = m;
   }
   return out;
 }
-
-function stripBig(col) {
-  const out = {};
-  for (const [id, c] of Object.entries(col)) {
-    const d = { ...c };
-    if (d.ph && d.ph.length > PH_MAX) delete d.ph;
-    out[id] = d;
-  }
-  return out;
-}
+const stripBig = col => Object.fromEntries(Object.entries(col).map(([id, c]) => {
+  const d = { ...c }; if (d.ph && d.ph.length > PH_MAX) delete d.ph; return [id, d];
+}));
 
 async function doSync(silent) {
-  const dot = $('#syncDot');
   try {
-    dot.textContent = '同步緊…';
+    $('#syncDot').textContent = '同步緊…';
     const { data: remote } = await syncCall('pull');
     const merged = mergeCol(COL, remote || {});
-    // 順便送埋名，個 Sheet 就會有張人睇得明嘅表
-    await syncCall('push', stripBig(merged), Object.fromEntries(CATALOG.map(i => [i.id, i.n])));
+    await syncCall('push', stripBig(merged), Object.fromEntries(CATALOG.map(i => [i.id, i.name])));
     COL = merged; write(K_COL, COL);
     SY.last = Date.now(); write(K_SYNC, SY);
     refresh(); syncStatus();
     if (!silent) toast('同步好咗');
   } catch (e) {
-    dot.textContent = '同步失敗';
+    $('#syncDot').textContent = '同步失敗';
     if (!silent) toast('同步失敗：' + e.message);
   }
 }
-
 function syncStatus() {
   $('#syncDot').textContent = !SY.url ? '未設定'
     : SY.last ? '上次 ' + new Date(SY.last).toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
@@ -1184,7 +1202,6 @@ function syncStatus() {
     ? `有 ${big} 張打卡相太大，過唔到 Sheet（其他嘢照樣同步）。要過機就用匯出 JSON。`
     : '收藏狀態、數量、打卡紀錄同細張相都會同步。';
 }
-
 $('#syncSave').onclick = () => {
   SY.url = $('#syncUrl').value.trim(); SY.key = $('#syncKey').value; SY.auto = $('#syncAuto').checked;
   write(K_SYNC, SY); syncStatus(); toast('設定已儲存');
@@ -1194,10 +1211,8 @@ $('#syncNow').onclick = () => {
   write(K_SYNC, SY); doSync(false);
 };
 
-/* ══ 自動載入 catalog.json（GitHub Action 每週更新嗰個）══════ */
-const K_AUTOCAT = 'ck.autocat';
+/* ── 自動載入 catalog.json ＋ manual.json ────────────────── */
 let autoCat = read(K_AUTOCAT, true);
-
 async function grab(name) {
   try {
     const r = await fetch(name, { cache: 'no-cache' });
@@ -1206,78 +1221,75 @@ async function grab(name) {
     return Array.isArray(j) ? j : [];
   } catch { return []; }
 }
-
 async function fetchCatalog() {
   if (!autoCat) return;
-  try {
-    // catalog.json = Action 抓返嚟嘅；manual.json = 你自己維護嗰份，
-    // 香港／台灣／大陸／韓國／澳門限定同一番賞放呢度，Action 唔會覆蓋。
-    const [auto, manual] = await Promise.all([grab('catalog.json'), grab('manual.json')]);
-    const seen = new Set(auto.map(x => x.id));
-    const arr = [...auto, ...manual.filter(x => !seen.has(x.id))];
-    if (!arr.length) return;
-    const cur = read(K_CAT, null);
-    const same = Array.isArray(cur) && cur.length === arr.length &&
-      cur[0]?.id === arr[0]?.id && cur.at(-1)?.id === arr.at(-1)?.id;
-    if (same) return;
-    const before = cur?.length || 0;
-    write(K_CAT, arr); loadCatalog(); refresh();
-    toast(before ? `圖鑑更新咗：${before} → ${arr.length} 件` : `載入咗 ${arr.length} 件`);
-  } catch { /* 本機用 file:// 開會 fetch 唔到，照用內建資料 */ }
+  const [auto, manual] = await Promise.all([grab('catalog.json'), grab('manual.json')]);
+  const seen = new Set(auto.map(x => String(x.id)));
+  const arr = [...auto, ...manual.filter(x => !seen.has(String(x.id)))];
+  if (!arr.length) return;
+  const cur = read(K_CAT, null);
+  const same = Array.isArray(cur) && cur.length === arr.length &&
+    String(cur[0]?.id) === String(arr[0]?.id) && String(cur.at(-1)?.id) === String(arr.at(-1)?.id);
+  if (same) return;
+  const before = cur?.length || 0;
+  write(K_CAT, arr); loadCatalog(); refresh();
+  toast(before ? `圖鑑更新咗：${before} → ${arr.length} 件` : `載入咗 ${arr.length} 件`);
 }
 $('#autoCat').onchange = e => { autoCat = e.target.checked; write(K_AUTOCAT, autoCat); if (autoCat) fetchCatalog(); };
 
-
-/* ══ 白雪 / 黑夜 / 跟系統 ═══════════════════════════════════ */
-const THEMES = [['auto', '◐', '跟系統'], ['light', '☀', '白雪'], ['dark', '☾', '黑夜']];
+/* ── 主題 / 縮放 ──────────────────────────────────────── */
+const THEMES = [['light', '☀', '白雪'], ['dark', '☾', '黑夜'], ['auto', '◐', '跟系統']];
 function applyTheme(pref) {
-  const dark = pref === 'dark' ||
-    (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
   const r = document.documentElement;
   r.dataset.theme = dark ? 'dark' : 'light';
   r.dataset.pref = pref;
   localStorage.setItem('ck.theme', pref);
-  const t = THEMES.find(x => x[0] === pref);
-  $('#themeBtn').textContent = t[1];
-  $('#themeBtn').title = t[2] + '（撳一下轉）';
+  const t = THEMES.find(x => x[0] === pref) || THEMES[0];
+  $('#themeBtn').textContent = t[1]; $('#themeBtn').title = t[2] + '（撳一下轉）';
 }
 $('#themeBtn').onclick = () => {
-  const i = THEMES.findIndex(x => x[0] === (document.documentElement.dataset.pref || 'auto'));
+  const i = THEMES.findIndex(x => x[0] === (document.documentElement.dataset.pref || 'light'));
   applyTheme(THEMES[(i + 1) % THEMES.length][0]);
 };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if ((document.documentElement.dataset.pref || 'auto') === 'auto') applyTheme('auto');
+  if (document.documentElement.dataset.pref === 'auto') applyTheme('auto');
 });
 
-/* ══ 放大縮細 ══════════════════════════════════════════════
-   所有尺寸都係 rem，改根字級就成個 app 一齊縮放。
-   手指捏大縮細照樣用得（viewport 冇鎖）。 */
 const ZOOMS = [0.8, 0.9, 1, 1.15, 1.3, 1.5];
+const curZoom = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
 function applyZoom(z) {
   document.documentElement.style.setProperty('--zoom', z);
   localStorage.setItem('ck.zoom', z);
-  $('#zOut').disabled = z <= ZOOMS[0];
-  $('#zIn').disabled = z >= ZOOMS.at(-1);
   $('#zOut').style.opacity = z <= ZOOMS[0] ? .4 : 1;
   $('#zIn').style.opacity = z >= ZOOMS.at(-1) ? .4 : 1;
 }
-const curZoom = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
 function stepZoom(d) {
   const z = curZoom();
-  let i = ZOOMS.reduce((best, v, k) => Math.abs(v - z) < Math.abs(ZOOMS[best] - z) ? k : best, 0);
+  const i = ZOOMS.reduce((best, v, k) => Math.abs(v - z) < Math.abs(ZOOMS[best] - z) ? k : best, 0);
   applyZoom(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + d))]);
 }
 $('#zIn').onclick = () => stepZoom(1);
 $('#zOut').onclick = () => stepZoom(-1);
 
+/* ── 小工具 ───────────────────────────────────────────── */
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 2600);
+}
+
 /* ── 接駁 ─────────────────────────────────────────────── */
 let qT;
 $('#q').addEventListener('input', e => {
-  F.q = e.target.value;
-  clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
+  F.q = e.target.value; clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
 });
-$('#groupBy').addEventListener('change', e => { UI.group = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
+for (const [sel, key] of [['#fChar', 'char'], ['#fMain', 'main'], ['#fSub', 'sub'],
+                          ['#fTheme', 'theme'], ['#fRegion', 'region']]) {
+  $(sel).addEventListener('change', e => { F[key] = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
+}
 $('#viewBy').addEventListener('change', e => { UI.view = e.target.value; write(K_UI, UI); refresh(); });
+$('#groupBy').addEventListener('change', e => { UI.group = e.target.value; UI.closed = {}; write(K_UI, UI); refresh(); });
 $('#cols').addEventListener('change', e => { UI.cols = +e.target.value; write(K_UI, UI); refresh(); });
 $('#foldAll').onclick = () => {
   const anyOpen = $$('#sections .sechead').some(b => b.getAttribute('aria-expanded') === 'true');
@@ -1287,9 +1299,10 @@ $('#foldAll').onclick = () => {
   $('#foldAll').textContent = anyOpen ? '全部打開' : '全部摺埋';
 };
 $('#clearFilters').onclick = () => {
-  F.q = ''; UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
+  F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
+  UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
   $('#q').value = ''; $('#viewBy').value = 'all'; $('#foldAll').textContent = '全部摺埋';
-  refresh();
+  buildOptions(); refresh();
 };
 $('#addItem').onclick = () => openEditor(null);
 $('#blankAdd').onclick = () => openEditor(null);
@@ -1299,12 +1312,12 @@ $('#expCatalog').onclick = () => download('catalog.json', CATALOG);
 $('#impCatalog').onclick = () => pickFile('catalog');
 $('#expManual').onclick = () => {
   const mine = read(K_CUSTOM, []);
-  if (!mine.length) return toast('仲未有自訂項目');
+  if (!mine.length) return toast('仲未有自訂或者改過嘅項目');
   download('manual.json', mine);
 };
 $('#resetCatalog').onclick = () => {
-  if (!confirm('還原成內建圖鑑？你匯入嘅官網資料會冇咗，收藏紀錄照樣保留。')) return;
-  localStorage.removeItem(K_CAT); loadCatalog(); refresh(); toast('已還原內建圖鑑');
+  if (!confirm('清走已載入嘅官網資料？收藏紀錄照樣保留，下次開頁會重新載入。')) return;
+  localStorage.removeItem(K_CAT); loadCatalog(); refresh(); toast('清咗');
 };
 $('#wipe').onclick = () => {
   if (!confirm('刪走全部收藏狀態同打卡紀錄？冇得返轉頭。')) return;
@@ -1317,12 +1330,12 @@ $$('.tabbtn').forEach(b => b.onclick = () => {
 });
 $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#detail').close(); });
 
+/* ── 開機 ─────────────────────────────────────────────── */
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
-applyTheme(localStorage.getItem('ck.theme') || 'auto');
-applyZoom(curZoom());
-
 $('#groupBy').value = UI.group; $('#viewBy').value = UI.view; $('#cols').value = UI.cols;
+applyTheme(localStorage.getItem('ck.theme') || 'light');
+applyZoom(curZoom());
 loadCatalog(); refresh(); syncStatus();
 fetchCatalog();
 if (SY.auto && SY.url) doSync(true);
