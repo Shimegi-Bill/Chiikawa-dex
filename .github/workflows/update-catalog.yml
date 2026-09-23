@@ -30,6 +30,7 @@ jobs:
           node scrape-chiikawa.mjs \
             --out catalog.json \
             --prev catalog.prev.json \
+            --country HK \
             --imgw 320 \
             --slow 700
           rm -f catalog.prev.json
@@ -37,13 +38,14 @@ jobs:
       - name: 睇下有冇新嘢
         id: diff
         run: |
-          if [ -z "$(git status --porcelain -- catalog.json img)" ]; then
+          if [ -z "$(git status --porcelain -- catalog.json missing-translations.json img)" ]; then
             echo "changed=no" >> "$GITHUB_OUTPUT"
             echo "官網冇新嘢，唔使 commit"
           else
             echo "changed=yes" >> "$GITHUB_OUTPUT"
             echo "count=$(node -e "console.log(require('./catalog.json').length)")" >> "$GITHUB_OUTPUT"
             echo "pics=$(ls img 2>/dev/null | wc -l | tr -d ' ')" >> "$GITHUB_OUTPUT"
+            echo "miss=$(node -e "try{console.log(require('./missing-translations.json')._未譯詞數)}catch{console.log(0)}")" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit
@@ -51,6 +53,6 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add catalog.json img
-          git commit -m "圖鑑更新：${{ steps.diff.outputs.count }} 件 · ${{ steps.diff.outputs.pics }} 張相（$(date -u -d '+8 hours' +%Y-%m-%d)）"
+          git add catalog.json missing-translations.json img
+          git commit -m "圖鑑更新：${{ steps.diff.outputs.count }} 件 · ${{ steps.diff.outputs.pics }} 張相 · ${{ steps.diff.outputs.miss }} 個詞未譯（$(date -u -d '+8 hours' +%Y-%m-%d)）"
           git push
