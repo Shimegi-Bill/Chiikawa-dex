@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+
+<!-- 加到主畫面：圖示同名 -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon.png" type="image/png">
+<meta name="application-name" content="吉伊圖鑑">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="吉伊圖鑑">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FAF6EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1B1622" media="(prefers-color-scheme: dark)">
 <title>吉伊卡哇 周邊圖鑑</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,6 +153,16 @@ tailwind.config = {
   .setrow button[data-own="1"] .ava{box-shadow:0 0 0 2px var(--gold)}
   .setrow button[data-own="1"] em{color:var(--paper);font-weight:700}
   .setrow button[data-own="2"] .ava{box-shadow:0 0 0 2px var(--rose);filter:grayscale(.5)}
+
+  /* 影相認嘢：搵到嘅候選 */
+  .scanhits{display:grid;gap:.4rem;grid-template-columns:1fr}
+  .scanhits button{display:flex;align-items:center;gap:.6rem;text-align:left;
+    padding:.4rem;border-radius:.65rem;border:1px solid var(--ink3);background:var(--ink)}
+  .scanhits button:hover{border-color:var(--gold)}
+  .scanhits .ava{width:2.8rem;height:2.8rem}
+  .scanhits .nm{flex:1;min-width:0;font-size:.78rem;line-height:1.25;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .scanhits .mt{flex-shrink:0;font-size:.68rem;color:var(--dim);text-align:right}
 
   /* 資料分頁：揀頭像 */
   .avarow{display:flex;align-items:center;gap:.6rem}
@@ -333,6 +355,7 @@ tailwind.config = {
     <div class="flex gap-2">
       <button class="btn btn-ghost hidden" id="foldAll">全部摺埋</button>
       <button class="btn btn-ghost" id="clearFilters">重設</button>
+      <button class="btn btn-ghost" id="scanBtn">📷 影相認嘢</button>
       <button class="btn btn-gold" id="addItem">＋ 自訂加入</button>
     </div>
   </div>
@@ -445,6 +468,24 @@ tailwind.config = {
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
+    <h3 class="font-round font-bold mb-1">AI 影相認嘢</h3>
+    <p class="text-dim text-[.78rem] mb-3">
+      影張相或者揀張相，交畀 Claude 睇係邊隻，然後幫你喺圖鑑度搵返。
+      要用你自己嘅 Anthropic API key。
+      <b class="text-rose">個 key 淨係存喺呢部機嘅瀏覽器，唔會入到 GitHub。</b>
+      但個網係公開嘅，唔好喺公用電腦填。
+    </p>
+    <label class="block mb-2"><span class="text-dim text-[.72rem]">API key（sk-ant-…）</span>
+      <input id="aiKey" type="password" class="field mt-1" autocomplete="off" placeholder="留空即係唔用呢個功能"></label>
+    <label class="block mb-3"><span class="text-dim text-[.72rem]">Model</span>
+      <input id="aiModel" class="field mt-1" placeholder="claude-sonnet-5"></label>
+    <div class="flex gap-2 items-center">
+      <button class="btn btn-gold" id="aiSave">儲存</button>
+      <span class="text-dim text-[.75rem]" id="aiDot"></span>
+    </div>
+  </div>
+
+  <div class="bg-ink2 border border-ink3 rounded-xl p-4">
     <h3 class="font-round font-bold mb-3">外觀</h3>
     <div class="flex items-center justify-between gap-3 mb-3">
       <span class="text-dim text-[.8rem]">主題</span>
@@ -491,6 +532,11 @@ tailwind.config = {
     <p class="text-dim text-[.78rem] mb-3">刪走所有收藏狀態同打卡紀錄，圖鑑本身唔會變。冇得返轉頭。</p>
     <button class="btn btn-ghost !border-rose/50 !text-rose" id="wipe">清空收藏紀錄</button>
   </div>
+
+  <p class="text-dim text-[.72rem] text-center pt-1 pb-6 leading-relaxed">
+    吉伊卡哇 周邊圖鑑　<span id="verText"></span><br>
+    Developed by Bill Chiu
+  </p>
 </section>
 
 </main>
@@ -558,6 +604,19 @@ tailwind.config = {
       <button type="button" class="btn btn-gold" id="editorSave">儲存</button>
     </div>
   </form>
+</dialog>
+
+<input type="file" id="scanCam" accept="image/*" capture="environment" class="hidden">
+<input type="file" id="scanLib" accept="image/*" class="hidden">
+
+<dialog id="scan" class="w-full sm:max-w-[34rem] sm:rounded-2xl">
+  <div class="bg-ink2 border border-ink3 sm:rounded-2xl max-h-[90vh] overflow-y-auto p-5">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-round font-bold text-lg">影相認嘢</h3>
+      <button class="btn btn-ghost !py-1" id="scanClose">關閉</button>
+    </div>
+    <div id="scanBody"></div>
+  </div>
 </dialog>
 
 <div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden bg-gold text-ink font-bold text-sm px-4 py-2 rounded-lg shadow-lg"></div>
@@ -771,6 +830,7 @@ function dropdown(host, { opts, value, prefix = '', onPick, highlight = false })
      region place release_date price type image image_remote url first_seen
    character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
+const VERSION = 'v1.8.0（2026-09-24）';
 const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
       K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
 
@@ -821,6 +881,16 @@ const splitChars = s => {
 
 /* 幣值符號照住 catalog 入面嗰個 code 出，唔知就標「?」，唔好扮有把握 */
 const SYM = { HKD: 'HK$', JPY: '¥', TWD: 'NT$', MOP: 'MOP$', CNY: '¥', KRW: '₩', USD: 'US$' };
+/* 打卡填嘅實付跟返圖鑑本身嘅幣值 —— 而家爬蟲釘住香港市場，所以係港幣。
+   圖鑑空嘅時候預設 HKD。 */
+let CUR_CODE = 'HKD';
+function pickCurrency() {
+  const m = new Map();
+  for (const x of CATALOG) if (x.currency) m.set(x.currency, (m.get(x.currency) || 0) + 1);
+  CUR_CODE = [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 'HKD';
+}
+const curSym = () => SYM[CUR_CODE] || (CUR_CODE === '?' ? '' : CUR_CODE + ' ');
+const cash = n => curSym() + Number(n || 0).toLocaleString('zh-HK', { maximumFractionDigits: 2 });
 const money = it => {
   if (!it.price) return '';
   const n = it.price.toLocaleString('zh-HK', { maximumFractionDigits: 2 });
@@ -914,6 +984,7 @@ function buildOptions() {
   for (const k of ['char', 'main', 'sub', 'theme', 'region'])
     if (F[k] && !OPTS[k].includes(F[k])) F[k] = '';
 
+  pickCurrency();
   buildSets();
   buildAvatars();
   renderControls();
@@ -1022,6 +1093,190 @@ $('#avaReset').onclick = () => {
   AVA_CACHE = {}; write(K_AVA, AVA_CACHE, true);
   AVA_VER++; buildAvatars(); renderCharBar(); renderAvaPicker(); toast('改返自動');
 };
+
+
+/* ══ 影相認嘢 ═══════════════════════════════════════════════
+   個網 host 喺 GitHub Pages，用唔到 Claude app 內置嗰個 API，
+   所以要你自己嘅 Anthropic key。key 存喺瀏覽器，唔會入 repo。
+
+   流程：影相 → 縮到 768px → 叫 Claude 講返係邊隻角色、咩類別、
+   有咩特徵 → 用呢啲字喺圖鑑度計分搵返 → 你揀返邊件先入手。
+
+   點解唔叫 AI 直接揀？圖鑑成 9000 件，好多隻樣similar到分唔開，
+   AI 亂揀一件你都唔知佢錯。所以 AI 負責「描述」，配對同決定留返俾你。
+   次序照你講：官方圖鑑行先，跟住自訂，兩樣都冇先開新。
+═════════════════════════════════════════════════════════════ */
+const K_AI = 'ck.ai';
+let AI = Object.assign({ key: '', model: 'claude-sonnet-5' }, read(K_AI, {}));
+let scanPhoto = null;        // 縮好嘅 data URI，認到之後攞嚟做打卡相
+let pendingNew = null;       // 「新開一件」時記住張相
+
+function aiStatus() {
+  $('#aiDot').textContent = AI.key ? '已設定' : '未設定，個掣會叫你入 key';
+}
+$('#aiSave').onclick = () => {
+  AI.key = $('#aiKey').value.trim();
+  AI.model = $('#aiModel').value.trim() || 'claude-sonnet-5';
+  write(K_AI, AI); aiStatus(); toast('已儲存');
+};
+
+/* 相縮細先，唔好send成張原圖上去 */
+function shrink(file, max = 768, q = 0.82) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL('image/jpeg', q));
+      };
+      img.onerror = rej; img.src = r.result;
+    };
+    r.onerror = rej; r.readAsDataURL(file);
+  });
+}
+
+async function askClaude(dataURL) {
+  const chars = (OPTS.char || []).join('、');
+  const cats = (OPTS.sub || []).slice(0, 40).join('、');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': AI.key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: AI.model,
+      max_tokens: 600,
+      system: '你係吉伊卡哇（ちいかわ）周邊嘅辨識助手。淨係回傳 JSON，唔好有任何其他文字、唔好用 markdown 圍住。',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: dataURL.split(',')[1] } },
+          { type: 'text', text:
+`睇吓相入面係邊件吉伊卡哇周邊，回傳呢個 JSON：
+{"character":"", "category":"", "features":"", "text":"", "keywords":[]}
+
+character：淨係可以揀呢啲其中一個，揀唔到就留空 —— ${chars}
+category：淨係可以揀呢啲其中一個，揀唔到就留空 —— ${cats}
+features：一句話講外觀（顏色、造型、配件、姿勢），用繁體中文
+text：相入面見到嘅字（日文原文照抄），冇就留空
+keywords：3 至 8 個搜尋關鍵字，日文同中文都可以，例如造型名、系列名、節日` },
+        ],
+      }],
+    }),
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status + '　' + (await r.text()).slice(0, 200));
+  const j = await r.json();
+  const txt = (j.content || []).map(c => c.text || '').join('').replace(/```json|```/g, '').trim();
+  return JSON.parse(txt);
+}
+
+function rank(g) {
+  const kws = [...(g.keywords || []), ...String(g.text || '').split(/[\s、,，]+/)]
+    .map(s => String(s).trim().toLowerCase()).filter(s => s.length > 1);
+  return CATALOG.map(it => {
+    let s = 0;
+    if (g.character && splitChars(it.character).includes(g.character)) s += 10;
+    if (g.category && it.sub_category === g.category) s += 6;
+    const hay = `${it.name} ${it.name_ja} ${it.theme} ${it.sub_category}`.toLowerCase();
+    for (const k of kws) if (hay.includes(k)) s += 3;
+    if (!isCustom(it.id)) s += 0.5;        // 官方圖鑑行先
+    return { it, s };
+  }).filter(r => r.s >= 6).sort((x, y) => y.s - x.s).slice(0, 12);
+}
+
+function scanOpen() {
+  if (!AI.key) {
+    $('#scanBody').innerHTML = `<p class="text-dim text-[.85rem] leading-relaxed">
+      呢個功能要你自己嘅 Anthropic API key。去「資料」分頁 → <b>AI 影相認嘢</b> 入咗先。
+      個 key 淨係存喺呢部機嘅瀏覽器，唔會入到 GitHub。</p>`;
+    return $('#scan').showModal();
+  }
+  $('#scanBody').innerHTML = `
+    <p class="text-dim text-[.85rem] mb-4">影張相，或者由相簿揀一張。相會縮到 768px 先 send。</p>
+    <div class="flex gap-2">
+      <button class="btn btn-gold flex-1" id="scanGoCam">📷 影相</button>
+      <button class="btn btn-ghost flex-1" id="scanGoLib">由相簿揀</button>
+    </div>`;
+  $('#scanGoCam').onclick = () => $('#scanCam').click();
+  $('#scanGoLib').onclick = () => $('#scanLib').click();
+  $('#scan').showModal();
+}
+
+async function scanRun(file) {
+  if (!file) return;
+  $('#scan').showModal();
+  try {
+    scanPhoto = await shrink(file);
+  } catch { return toast('讀唔到張相'); }
+  $('#scanBody').innerHTML = `
+    <img src="${esc(scanPhoto)}" alt="" class="w-full max-h-[14rem] object-contain rounded-xl mb-4">
+    <p class="text-dim text-[.85rem]">叫緊 Claude 睇…</p>`;
+  let g;
+  try { g = await askClaude(scanPhoto); }
+  catch (e) {
+    $('#scanBody').innerHTML += `<p class="text-rose text-[.8rem] mt-3 break-all">認唔到：${esc(e.message)}</p>`;
+    return;
+  }
+  const hits = rank(g);
+  $('#scanBody').innerHTML = `
+    <img src="${esc(scanPhoto)}" alt="" class="w-full max-h-[12rem] object-contain rounded-xl mb-3">
+    <div class="flex flex-wrap gap-[.3rem] mb-2">
+      ${g.character ? `<span class="chip ch">${esc(g.character)}</span>` : ''}
+      ${g.category ? `<span class="chip ca">${esc(g.category)}</span>` : ''}
+      ${(g.keywords || []).slice(0, 6).map(k => `<span class="chip">${esc(k)}</span>`).join('')}
+    </div>
+    ${g.features ? `<p class="text-dim text-[.8rem] mb-4">${esc(g.features)}</p>` : ''}
+    ${hits.length
+      ? `<p class="font-round font-bold text-[.9rem] mb-2">圖鑑搵到 ${hits.length} 件似嘅，揀返邊件：</p>
+         <div class="scanhits">${hits.map(({ it, s }) => {
+            const [c1, c2] = colorOf(splitChars(it.character)[0]);
+            const src = it.image || it.image_remote;
+            return `<button data-pick="${esc(it.id)}">
+              <span class="ava" style="--c1:${c1};--c2:${c2}">
+                <b>${esc((splitChars(it.character)[0] || '？')[0])}</b>
+                ${src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</span>
+              <span class="nm">${esc(it.name)}</span>
+              <span class="mt">${st(it.id) === 1 ? '已入手' : esc(it.sub_category)}　${Math.round(s)}分</span>
+            </button>`; }).join('')}</div>`
+      : `<p class="text-dim text-[.85rem] mb-3">圖鑑入面搵唔到似嘅。可以開新一件。</p>`}
+    <label class="flex items-center gap-2 text-[.8rem] text-dim mt-4">
+      <input type="checkbox" id="scanKeep" class="accent-gold" checked> 順便將張相設做打卡相
+    </label>
+    <button class="btn btn-ghost w-full mt-3" id="scanNew">都唔係，開新一件</button>`;
+
+  $$('#scanBody [data-pick]').forEach(b => b.onclick = () => {
+    const id = b.dataset.pick;
+    const c = touch(id);
+    c.s = 1; if (!c.q) c.q = 1;
+    if ($('#scanKeep').checked) c.ph = scanPhoto;
+    write(K_COL, COL); refresh();
+    $('#scan').close(); toast('已標做入手');
+    openDetail(id);
+  });
+  $('#scanNew').onclick = () => {
+    pendingNew = $('#scanKeep').checked ? scanPhoto : null;
+    $('#scan').close();
+    openEditor(null);
+    $('#eName').value = [g.character, g.features].filter(Boolean).join(' ');
+    $('#eChar').value = g.character || '';
+    if (g.category) $('#eSub').value = g.category;
+    $('#eRg').value = '香港';
+  };
+  $$('#scanBody .scanhits img').forEach(im => im.addEventListener('error', () => im.remove()));
+}
+
+$('#scanBtn').onclick = scanOpen;
+$('#scanClose').onclick = () => $('#scan').close();
+$('#scan').addEventListener('click', e => { if (e.target.id === 'scan') $('#scan').close(); });
+$('#scanCam').addEventListener('change', e => { scanRun(e.target.files[0]); e.target.value = ''; });
+$('#scanLib').addEventListener('change', e => { scanRun(e.target.files[0]); e.target.value = ''; });
 
 /* ══ 篩選控制項 ═══════════════════════════════════════════
    全部自己畫：角色打橫攤開做 chip，其餘做自訂下拉。
@@ -1611,7 +1866,7 @@ function openDetail(id) {
         <div class="grid grid-cols-2 gap-2">
           <label class="block"><span class="text-dim text-[.7rem]">日期</span>
             <input id="lDate" type="date" class="field mt-1" value="${new Date().toISOString().slice(0, 10)}"></label>
-          <label class="block"><span class="text-dim text-[.7rem]">實付（¥）</span>
+          <label class="block"><span class="text-dim text-[.7rem]">實付（${esc(curSym().trim() || CUR_CODE)}）</span>
             <input id="lPrice" type="number" class="field mt-1" placeholder="${it.price || ''}"></label>
           <label class="block col-span-2"><span class="text-dim text-[.7rem]">入手地點</span>
             <input id="lPlace" class="field mt-1" placeholder="例：吉伊卡哇樂園 東京站"></label>
@@ -1624,7 +1879,7 @@ function openDetail(id) {
             <div><div class="font-bold">${esc(l.d || '')}${l.pl ? '　' + esc(l.pl) : ''}</div>
               ${l.no ? `<div class="text-dim text-[.72rem] mt-[2px]">${esc(l.no)}</div>` : ''}</div>
             <div class="text-right shrink-0">
-              ${l.pr ? `<div class="text-gold font-bold">¥${Number(l.pr).toLocaleString()}</div>` : ''}
+              ${l.pr ? `<div class="text-gold font-bold">HK$${Number(l.pr).toLocaleString('zh-HK')}</div>` : ''}
               <button class="text-dim text-[.68rem] mt-1" data-dellog="${i}">刪除</button>
             </div>
           </li>`).join('')}</ul>` : ''}
@@ -1698,7 +1953,7 @@ function renderLogs() {
   }
   rows.sort((a, b) => (b.l.d || '').localeCompare(a.l.d || ''));
   $('#logCount').textContent = rows.length
-    ? `${rows.length} 次　共 ¥${rows.reduce((s, r) => s + (+r.l.pr || 0), 0).toLocaleString()}` : '';
+    ? `${rows.length} 次　共 ${cash(rows.reduce((s, r) => s + (+r.l.pr || 0), 0))}` : '';
   $('#logEmpty').classList.toggle('hidden', rows.length > 0);
   $('#logList').replaceChildren(...rows.map(({ it, l, ph }) => {
     const [c1, c2] = colorOf(splitChars(it.character)[0]);
@@ -1715,7 +1970,7 @@ function renderLogs() {
         <div class="text-dim text-[.72rem] mt-[2px]">${esc(l.d || '')}${l.pl ? '　·　' + esc(l.pl) : ''}</div>
         ${l.no ? `<div class="text-dim text-[.7rem] mt-[2px] truncate">${esc(l.no)}</div>` : ''}
       </div>
-      ${l.pr ? `<div class="text-gold font-bold text-[.82rem] shrink-0">¥${Number(l.pr).toLocaleString()}</div>` : ''}`;
+      ${l.pr ? `<div class="text-gold font-bold text-[.82rem] shrink-0">HK$${Number(l.pr).toLocaleString('zh-HK')}</div>` : ''}`;
     d.onclick = () => openDetail(it.id);
     return d;
   }));
@@ -1733,7 +1988,7 @@ function renderStats() {
       <div class="text-dim text-[.7rem] mt-1">${label}</div></div>`;
   $('#statCards').innerHTML =
     box('已入手', own.length, 'text-gold') + box('未入手', all - own.length - want) +
-    box('想要', want, 'text-rose') + box('累積花費', '¥' + spent.toLocaleString(), 'text-mint');
+    box('想要', want, 'text-rose') + box('累積花費', cash(spent), 'text-mint');
 
   const grp = (host, keysOf) => {
     // 同樣一次過數晒：掃一次圖鑑，順手記低每個值嘅總數同已入手數
@@ -1843,7 +2098,12 @@ $('#editorSave').onclick = () => {
   const i = custom.findIndex(x => String(x.id) === String(item.id));
   if (i >= 0) custom[i] = item; else custom.push(item);
   write(K_CUSTOM, custom);
-  loadCatalog(); refresh();
+  loadCatalog();
+  if (pendingNew !== null && !editingId) {     // 由「影相認嘢 → 開新一件」入嚟
+    const c = touch(item.id); c.s = 1; c.q = 1; c.ph = pendingNew;
+    write(K_COL, COL); pendingNew = null;
+  }
+  refresh();
   $('#editor').close(); toast(editingId ? '改好咗' : '已加入圖鑑');
   editingId = null;
 };
@@ -2113,6 +2373,8 @@ $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#
 /* ── 開機 ─────────────────────────────────────────────── */
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
+$('#verText').textContent = VERSION;
+$('#aiKey').value = AI.key; $('#aiModel').value = AI.model; aiStatus();
 applyTheme(localStorage.getItem('ck.theme') || 'light');
 applyZoom(curZoom());
 

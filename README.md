@@ -6,6 +6,10 @@
 ```
 你個 repo/
 ├─ index.html              整個 app（single file）
+├─ manifest.webmanifest    加到主畫面用
+├─ apple-touch-icon.png    iOS 主畫面圖示（180px）
+├─ icon.png                Android 圖示（512px）
+├─ icon-maskable.png       Android 適應形狀圖示
 ├─ catalog.json            官網抓返嚟嘅（Action 自動更新，你唔使手改）
 ├─ manual.json             你自己維護嗰份，Action 永遠唔會掂
 ├─ translations.json       日文→繁中對照表，同主程式完全分開
@@ -307,7 +311,41 @@ Sheet 有兩張表：`data`（機器讀）同 `收藏一覽`（你睇嘅）。
 
 ---
 
-## 6　瀏覽器儲存
+## 6　加到主畫面
+
+`index.html` 已經有齊 manifest 同 icon 嘅 link，四個檔一齊放 repo root 就得。
+
+- **iPhone**：Safari 開個網 → 分享 → 加入主畫面。顯示名係「吉伊圖鑑」。
+  iOS 唔食 `data:` URI 或者 SVG 做 icon，所以 `apple-touch-icon.png` 一定要係真檔。
+- **Android**：Chrome 開個網 → 選單 → 安裝應用程式。
+
+開出嚟係 standalone，冇瀏覽器工具列。
+
+---
+
+## 7　AI 影相認公仔
+
+「資料」分頁入你自己嘅 Anthropic API key（存喺瀏覽器，唔會入 repo），
+之後圖鑑頁就會有粒相機掣。
+
+流程：影相 → 縮到 768px → 叫 Claude 講返係邊隻角色、咩類別、有咩特徵 →
+用呢啲字喺圖鑑度計分搵返最似嗰 12 件 → 你揀返邊件 → 自動標做已入手，
+順便將張相設做打卡相。
+
+**點解唔叫 AI 直接揀？** 圖鑑成 9000 件，好多款樣衰到分唔開，
+AI 亂揀一件你都唔知佢錯。所以 AI 負責「描述」，配對同最後決定留返俾你。
+
+配對次序照你要求：官方圖鑑行先（評分 +0.5），跟住自訂圖鑑，
+兩樣都搵唔到就撳「都唔係，開新一件」——
+會用 AI 認到嘅角色同類別預先填好編輯器，張相亦都會跟埋。
+
+**要知嘅**：API key 擺喺瀏覽器本身有風險。
+用一支有 spend limit 嘅 key，唔好同其他嘢共用。
+每次認一件大概用幾百 token，成本好細。
+
+---
+
+## 8　瀏覽器儲存
 
 成份圖鑑（近 9000 件、幾 MB）**放記憶體，唔存 localStorage**。
 localStorage 得 5MB，塞唔落會掟 `QuotaExceededError`，
@@ -328,7 +366,7 @@ localStorage 只擺細嘢：
 
 ---
 
-## 7　備份
+## 9　備份
 
 同步唔等於備份 —— 合併出錯或者撳錯，兩邊會一齊錯。
 「資料」分頁定期撳 **匯出收藏 JSON**，嗰個檔連打卡相都有齊。

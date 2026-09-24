@@ -1,0 +1,17 @@
+{
+  "name": "吉伊卡哇 周邊圖鑑",
+  "short_name": "吉伊圖鑑",
+  "description": "吉伊卡哇周邊收藏圖鑑：收藏狀態、打卡紀錄、套裝進度",
+  "lang": "zh-Hant-HK",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF6EC",
+  "theme_color": "#FAF6EC",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
