@@ -145,6 +145,18 @@ tailwind.config = {
   .setrow button[data-own="1"] em{color:var(--paper);font-weight:700}
   .setrow button[data-own="2"] .ava{box-shadow:0 0 0 2px var(--rose);filter:grayscale(.5)}
 
+  /* 資料分頁：揀頭像 */
+  .avarow{display:flex;align-items:center;gap:.6rem}
+  .avarow>button{display:flex;align-items:center;gap:.5rem;flex:1;text-align:left;
+    padding:.3rem;border-radius:.6rem}
+  .avarow>button:hover{background:var(--slot)}
+  .avarow .ava{width:2.4rem;height:2.4rem}
+  .avapool{display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem 0 .2rem 3rem}
+  .avapool button{width:2.6rem;height:2.6rem;border-radius:50%;overflow:hidden;
+    border:2px solid transparent;background:var(--slot)}
+  .avapool button[aria-pressed="true"]{border-color:var(--gold)}
+  .avapool img{width:100%;height:100%;object-fit:cover;object-position:50% 35%}
+
   .tag{font-size:.75rem;padding:.25rem .7rem;border-radius:99px;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);transition:.14s}
   .tag:hover{border-color:var(--edgeHi);color:var(--paper)}
@@ -213,12 +225,13 @@ tailwind.config = {
   .ddgrid{display:grid;gap:.5rem;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));
     padding:.75rem;background:var(--slot);border:1px solid var(--ink3);border-radius:.75rem}
   /* 角色小頭像：用圖鑑入面該角色嘅實物相，載唔到就退做色底＋首字 */
-  .ava{position:relative;width:1.5rem;height:1.5rem;border-radius:50%;overflow:hidden;
+  .ava{position:relative;width:2.1rem;height:2.1rem;border-radius:50%;overflow:hidden;
     flex-shrink:0;display:grid;place-items:center;
     background:radial-gradient(circle at 50% 38%,var(--c1),var(--c2))}
-  .ava b{font-family:'Zen Maru Gothic',sans-serif;font-size:.7rem;font-weight:900;
+  .ava b{font-family:'Zen Maru Gothic',sans-serif;font-size:.95rem;font-weight:900;
     color:rgba(40,30,20,.7);line-height:1}
-  .ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  /* 公仔相個頭多數喺上半部，所以向上裁先見到塊面 */
+  .ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 35%}
   .charbar button[aria-pressed="true"] .ava{box-shadow:0 0 0 1.5px var(--sealInk)}
   .ava.all{background:var(--slot);border:1px dashed var(--edge)}
   .ava.all b{color:var(--dim);font-size:.62rem}
@@ -229,8 +242,8 @@ tailwind.config = {
 
   /* ── 角色橫列 ──────────────────────────────────── */
   .charbar{display:flex;flex-wrap:wrap;gap:.4rem;padding-bottom:.35rem}
-  .charbar button{display:flex;align-items:center;gap:.35rem;flex-shrink:0;
-    padding:.25rem .65rem .25rem .25rem;border-radius:99px;border:1px solid var(--ink3);
+  .charbar button{display:flex;align-items:center;gap:.4rem;flex-shrink:0;
+    padding:.2rem .7rem .2rem .2rem;border-radius:99px;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--paper);font-size:.78rem;font-weight:500;
     white-space:nowrap;transition:.14s}
   .charbar button:hover{border-color:var(--edgeHi)}
@@ -309,6 +322,7 @@ tailwind.config = {
       <div id="ddSub"></div>
       <div id="ddTheme"></div>
       <div id="ddRegion"></div>
+      <div id="ddSet"></div>
       <div id="ddView"></div>
       <div id="ddGroup"></div>
       <div id="ddCols"></div>
@@ -429,6 +443,17 @@ tailwind.config = {
     <div class="bar my-2"><span id="quotaBar" style="width:0%"></span></div>
     <p class="text-dim text-[.75rem]" id="quotaText"></p>
     <p class="text-dim text-[.72rem] mt-2">影嘅相會自動縮到 640px、轉 JPEG 先存，慳位。</p>
+  </div>
+
+  <div class="bg-ink2 border border-ink3 rounded-xl p-4">
+    <h3 class="font-round font-bold mb-1">角色頭像</h3>
+    <p class="text-dim text-[.78rem] mb-3">
+      系統會自動由圖鑑揀一張最似基本造型嘅相做頭像（扮嘢款會扣分）。
+      認唔出邊隻就撳個角色，揀返你覺得最易認嗰張。揀完會裁好存落瀏覽器，
+      之後開頁唔使再載。
+    </p>
+    <div id="avaList" class="space-y-2"></div>
+    <button class="btn btn-ghost mt-3" id="avaReset">全部改返自動</button>
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
@@ -765,7 +790,7 @@ let UI = Object.assign({}, UI_DEFAULTS, read(K_UI, {}));
 // 舊版存落嘅偏好係 4 欄＋按系列分段，重設一次做新 default
 if (UI.v !== UI_DEFAULTS.v) UI = Object.assign(UI, { v: 2, cols: 3, group: 'none', sort: 'date-desc' });
 UI.cols = Math.min(8, Math.max(3, +UI.cols || 3));
-let F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
+let F = { q: '', char: '', main: '', sub: '', theme: '', region: '', set: '' };
 let editingId = null;
 
 /* ── 角色字串 → 陣列（逗號分隔，去空白）───────────────── */
@@ -870,6 +895,7 @@ function buildOptions() {
   buildSets();
   buildAvatars();
   renderControls();
+  renderAvaPicker();
 
   // 編輯器嘅輸入提示
   const dl = (id, arr) => $(id).replaceChildren(...arr.map(v => {
@@ -923,6 +949,58 @@ function buildSets() {
 const setOf = it => it.set_key ? SETS.get(it.set_key) : null;
 const setOwned = s => s.items.filter(i => st(i.id) === 1).length;
 
+/* ── 資料分頁：自己揀角色頭像 ──────────────────────────── */
+function renderAvaPicker() {
+  const host = $('#avaList');
+  host.replaceChildren(...(OPTS.char || []).map(c => {
+    const [c1, c2] = colorOf(c);
+    const row = document.createElement('div');
+    const src = avaSrc(c);
+    row.innerHTML = `
+      <div class="avarow">
+        <button type="button" data-c="${esc(c)}">
+          <span class="ava" style="--c1:${c1};--c2:${c2}"><b>${esc(c[0])}</b>${
+            src ? `<img src="${esc(src)}" alt="">` : ''}</span>
+          <span class="text-[.84rem] font-bold">${esc(c)}</span>
+          <span class="text-dim text-[.72rem]">${AVA_PICK[c] ? '自己揀' : '自動'}</span>
+        </button>
+      </div>
+      <div class="avapool hidden"></div>`;
+    row.querySelector('[data-c]').onclick = () => {
+      const pool = row.querySelector('.avapool');
+      if (!pool.classList.contains('hidden')) return pool.classList.add('hidden');
+      if (!pool.children.length) {
+        const cands = CATALOG
+          .filter(x => splitChars(x.character).length === 1 && splitChars(x.character)[0] === c
+                    && (x.image || x.image_remote))
+          .sort((x, y) => avaScore(y) - avaScore(x))
+          .slice(0, 24);
+        pool.replaceChildren(...cands.map(x => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.title = x.name;
+          b.setAttribute('aria-pressed', String(AVA_PICK[c] === x.id));
+          b.innerHTML = `<img src="${esc(x.image || x.image_remote)}" alt="" loading="lazy" referrerpolicy="no-referrer">`;
+          b.onclick = () => {
+            if (AVA_PICK[c] === x.id) delete AVA_PICK[c]; else AVA_PICK[c] = x.id;
+            write(K_AVAPICK, AVA_PICK);
+            delete AVA_CACHE[c]; write(K_AVA, AVA_CACHE, true);
+            AVA_VER++; buildAvatars(); renderCharBar(); renderAvaPicker();
+          };
+          return b;
+        }));
+      }
+      pool.classList.remove('hidden');
+    };
+    return row;
+  }));
+}
+$('#avaReset').onclick = () => {
+  AVA_PICK = {}; write(K_AVAPICK, AVA_PICK);
+  AVA_CACHE = {}; write(K_AVA, AVA_CACHE, true);
+  AVA_VER++; buildAvatars(); renderCharBar(); renderAvaPicker(); toast('改返自動');
+};
+
 /* ══ 篩選控制項 ═══════════════════════════════════════════
    全部自己畫：角色打橫攤開做 chip，其餘做自訂下拉。
    唔用 <select> —— iOS 會彈原生轉盤，樣式控制唔到，
@@ -938,47 +1016,117 @@ const GROUPS = [
 ];
 const cnt = (f, v) => TALLY[f]?.get(v) || 0;
 
-/* 角色小頭像：唔另外畫角色圖，直接由圖鑑揀一張該角色嘅實物相。
-   條件：淨係得佢一個角色（唔好揀合照）、有相；公仔／掛飾優先，
-   同一批入面揀最新出嗰件。揀唔到就退返色底加首字。 */
-let AVATARS = new Map();
+/* ══ 角色小頭像 ═══════════════════════════════════════════
+   唔另外畫角色圖，由圖鑑揀一張該角色嘅實物相。
+   要一眼認得出係邊隻，所以唔係求其揀一張 —— 用分數揀：
+     · 基本款 > 聯名／活動款（聯名款多數有造型，認唔出本尊）
+     · 公仔／掛飾 > 其他（最似角色本身）
+     · 名入面有「仮装・扮・おばけ・パジャマ・かぼちゃ」呢類扮嘢字眼要扣分
+     · 名短啲好啲，越簡單越似基本造型
+   揀完會裁成正方形、向上偏 35%（公仔相個頭多數喺上半部），
+   存做 data URI 落 localStorage，之後開頁直接用，唔使再攞。
+═══════════════════════════════════════════════════════════ */
+const K_AVA = 'ck.avatars', K_AVAPICK = 'ck.avapick';
+let AVATARS = new Map();                 // 角色 → 原圖網址
+let AVA_CACHE = read(K_AVA, {});         // 角色 → {src, data}
+let AVA_PICK = read(K_AVAPICK, {});      // 角色 → 你自己揀嗰件嘅 id
+let AVA_VER = 0;
+
+const COSTUME = /仮装|変装|扮|着ぐるみ|コスチューム|おばけ|オバケ|かぼちゃ|パジャマ|制服|ユニフォーム|コウモリ|幽靈|南瓜|睡衣|造型|裝扮/;
+
+function avaScore(x) {
+  let s = 0;
+  if (/基本款|^ちいかわ$|^吉伊卡哇$/.test(x.theme)) s += 4;
+  if (/公仔|掛飾|玩偶|ぬいぐるみ|マスコット/.test(x.sub_category)) s += 3;
+  if (/ダイカット|缶バッジ|襟章|磁石|貼紙/.test(x.sub_category)) s += 1;
+  if (COSTUME.test(x.name)) s -= 5;
+  s -= Math.min(3, Math.floor(x.name.length / 14));   // 名越長越唔似基本造型
+  return s;
+}
+
 function buildAvatars() {
   const pool = new Map();
   for (const x of CATALOG) {
     const cs = splitChars(x.character);
-    if (cs.length !== 1) continue;
-    const src = x.image || x.image_remote;
-    if (!src) continue;
+    if (cs.length !== 1) continue;                     // 唔要合照
+    if (!(x.image || x.image_remote)) continue;
     const c = cs[0];
-    const good = /公仔|掛飾|玩偶|ぬいぐるみ|マスコット/.test(x.sub_category);
+    if (AVA_PICK[c]) { if (x.id === AVA_PICK[c]) pool.set(c, x); continue; }
     const cur = pool.get(c);
-    if (!cur || (good && !cur.good) ||
-        (good === cur.good && (x.release_date || '') > (cur.d || ''))) {
-      pool.set(c, { src, good, d: x.release_date || '' });
-    }
+    if (!cur) { pool.set(c, x); continue; }
+    const d = avaScore(x) - avaScore(cur);
+    if (d > 0 || (d === 0 && cmpStr(x.release_date, cur.release_date) < 0)) pool.set(c, x);
   }
-  AVATARS = new Map([...pool].map(([c, v]) => [c, v.src]));
+  AVATARS = new Map([...pool].map(([c, x]) => [c, x.image || x.image_remote]));
+  cacheAvatars();
 }
 
-function renderControls() {
-  /* ── 角色：全部攤開，主角排先 ── */
+const blobToDataURL = b => new Promise((res, rej) => {
+  const f = new FileReader(); f.onload = () => res(f.result); f.onerror = rej; f.readAsDataURL(b);
+});
+
+/* 裁成正方形存落 localStorage。跨網域相 canvas 會污染、匯出唔到，
+   嗰陣就照用原網址，唔會壞。 */
+async function cacheAvatars() {
+  let changed = false;
+  for (const [name, src] of AVATARS) {
+    if (AVA_CACHE[name]?.src === src) continue;
+    try {
+      const r = await fetch(src, { cache: 'force-cache' });
+      if (!r.ok) continue;
+      const durl = await blobToDataURL(await r.blob());
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = durl; });
+      const S = 112, cv = document.createElement('canvas');
+      cv.width = cv.height = S;
+      const k = Math.max(S / img.width, S / img.height);
+      const w = img.width * k, h = img.height * k;
+      cv.getContext('2d').drawImage(img, (S - w) / 2, (S - h) * 0.35, w, h);
+      AVA_CACHE[name] = { src, data: cv.toDataURL('image/jpeg', 0.82) };
+      changed = true;
+    } catch { /* 攞唔到就照用原網址 */ }
+  }
+  if (changed) {
+    write(K_AVA, AVA_CACHE, true);
+    AVA_VER++; renderControls();
+  }
+}
+const avaSrc = name => AVA_CACHE[name]?.data || AVATARS.get(name) || '';
+
+
+/* 角色列唔好每次 refresh 都重新砌 —— 一重砌啲 <img> 就會閃一閃，
+   睇落好似「撳一下就 reload」。冧巴同選中狀態就地改就得。 */
+let charSig = '';
+function renderCharBar() {
   const bar = $('#charBar');
+  const sig = (OPTS.char || []).join('|') + '#' + AVA_VER;
+  if (sig === charSig && bar.children.length) {
+    for (const b of bar.children) {
+      b.setAttribute('aria-pressed', String(F.char === b.dataset.v));
+      const em = b.querySelector('em');
+      if (em) em.textContent = b.dataset.v ? cnt('char', b.dataset.v) : CATALOG.length;
+    }
+    return;
+  }
+  charSig = sig;
+
   const chip = (v, label, n, lead) => {
     const b = document.createElement('button');
     b.type = 'button';
+    b.dataset.v = v;
     b.className = lead ? 'lead' : '';
     b.setAttribute('aria-pressed', String(F.char === v));
     const [c1, c2] = colorOf(v);
-    const src = v ? AVATARS.get(v) : null;
+    const src = v ? avaSrc(v) : '';
     const ava = v
       ? `<span class="ava" style="--c1:${c1};--c2:${c2}"><b>${esc(v[0])}</b>${
           src ? `<img src="${esc(src)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : ''}</span>`
       : `<span class="ava all"><b>全</b></span>`;
-    b.innerHTML = `${ava}<span>${esc(label)}</span>${n != null ? `<em>${n}</em>` : ''}`;
+    b.innerHTML = `${ava}<span>${esc(label)}</span><em>${n}</em>`;
     const img = b.querySelector('.ava img');
-    if (img) img.addEventListener('error', () => img.remove());   // 相唔見咗就顯示返首字
+    if (img) img.addEventListener('error', () => img.remove());
     b.onclick = () => {
-      F.char = F.char === v ? '' : v;      // 撳返同一個＝取消
+      F.char = F.char === v ? '' : v;
       UI.closed = {}; write(K_UI, UI); refresh();
     };
     return b;
@@ -987,6 +1135,10 @@ function renderControls() {
     chip('', '全部', CATALOG.length),
     ...(OPTS.char || []).map((c, i) => chip(c, c, cnt('char', c), i < 3)),
   );
+}
+
+function renderControls() {
+  renderCharBar();
 
   /* ── 其餘篩選：自訂下拉 ── */
   const pick = (key) => (v) => { F[key] = v; UI.closed = {}; write(K_UI, UI); refresh(); };
@@ -998,6 +1150,17 @@ function renderControls() {
   dropdown('#ddSub',    { opts: list('sub', '所有細類'),    value: F.sub,    onPick: pick('sub'),    highlight: true });
   dropdown('#ddTheme',  { opts: list('theme', '所有系列'),  value: F.theme,  onPick: pick('theme'),  highlight: true });
   dropdown('#ddRegion', { opts: list('region', '所有地區'), value: F.region, onPick: pick('region'), highlight: true });
+
+  // 套裝可以有幾百個，所以排最新出嗰啲行先，個 menu 本身捲得
+  const setOpts = [...SETS.values()]
+    .sort((x, y) => cmpStr(y.items.at(-1)?.release_date, x.items.at(-1)?.release_date)
+      || y.items.length - x.items.length)
+    .map(s => ({ v: s.key, label: s.name, n: `${setOwned(s)}/${s.items.length}` }));
+  if (F.set && !SETS.has(F.set)) F.set = '';
+  dropdown('#ddSet', {
+    opts: [{ v: '', label: `所有套裝（${SETS.size}）` }, ...setOpts],
+    value: F.set, highlight: true, onPick: pick('set'),
+  });
 
   dropdown('#ddView', {
     opts: VIEWS.map(([v, label]) => ({ v, label })), value: UI.view, highlight: true,
@@ -1017,7 +1180,7 @@ function renderControls() {
   });
 
   /* ── 「篩選」掣上面嘅數字：而家開緊幾多個條件 ── */
-  const on = ['main', 'sub', 'theme', 'region'].filter(k => F[k]).length
+  const on = ['main', 'sub', 'theme', 'region', 'set'].filter(k => F[k]).length
            + (UI.view !== 'all' ? 1 : 0);
   const badge = $('#filterCount');
   badge.textContent = on;
@@ -1045,6 +1208,7 @@ function filtered() {
     if (F.sub && it.sub_category !== F.sub) return false;
     if (F.theme && it.theme !== F.theme) return false;
     if (F.region && it.region !== F.region) return false;
+    if (F.set && it.set_key !== F.set) return false;
 
     const s = st(it.id);
     switch (UI.view) {
@@ -1817,7 +1981,7 @@ $('#foldAll').onclick = () => {
   $('#foldAll').textContent = anyOpen ? '全部打開' : '全部摺埋';
 };
 $('#clearFilters').onclick = () => {
-  F = { q: '', char: '', main: '', sub: '', theme: '', region: '' };
+  F = { q: '', char: '', main: '', sub: '', theme: '', region: '', set: '' };
   UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
   $('#q').value = ''; $('#foldAll').textContent = '全部摺埋';
   refresh();
