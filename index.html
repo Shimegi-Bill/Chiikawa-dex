@@ -43,7 +43,7 @@ tailwind.config = {
   :root[data-theme="dark"]{
     --ink:#1B1622; --ink2:#241D2E; --ink3:#352B47;
     --paper:#F5EFE2; --dim:#8C81A0;
-    --gold:#E8B84B; --rose:#E68DA0; --mint:#7FD3BE; --sky:#8FB8E8;
+    --gold:#E8B84B; --rose:#E68DA0; --mint:#7FD3BE; --sky:#8FB8E8; --ok:#5FCF97;
     --slot:#1F1929; --slotOwn:#2A2136; --edge:#3A3048; --edgeHi:#4A3D60;
     --sealInk:#1B1622; --shadow:rgba(0,0,0,.45); --veil:rgba(12,9,17,.82);
     --track:#302740; color-scheme:dark;
@@ -51,7 +51,7 @@ tailwind.config = {
   :root[data-theme="light"]{
     --ink:#FAF6EC; --ink2:#FFFFFF; --ink3:#E6DCC8;
     --paper:#2C2438; --dim:#7A7188;
-    --gold:#B07C1E; --rose:#C4546F; --mint:#2E8F76; --sky:#3E72AE;
+    --gold:#B07C1E; --rose:#C4546F; --mint:#2E8F76; --sky:#3E72AE; --ok:#2E9E63;
     --slot:#F2EBDC; --slotOwn:#FFF8E6; --edge:#DED3BE; --edgeHi:#C3B394;
     --sealInk:#FFFFFF; --shadow:rgba(90,70,40,.18); --veil:rgba(60,48,30,.45);
     --track:#E6DCC8; color-scheme:light;
@@ -76,11 +76,6 @@ tailwind.config = {
   :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
   .topbar{background:var(--ink);opacity:.98;backdrop-filter:blur(8px)}
 
-  /* ── 進度絲帶 ──────────────────────────────────────── */
-  .ribbon{display:flex;flex-wrap:wrap;gap:2px;align-content:flex-start}
-  .ribbon i{width:.44rem;height:.44rem;border-radius:1.5px;background:var(--edge);display:block}
-  .ribbon i.on{background:var(--gold)}
-  .ribbon i.want{background:var(--rose);opacity:.6}
 
   /* ── 圖鑑格 ────────────────────────────────────────── */
   .slot{position:relative;border-radius:.875rem;overflow:hidden;
@@ -92,14 +87,15 @@ tailwind.config = {
   .slot .shot img{width:100%;height:100%;object-fit:cover;display:block;
     transition:filter .3s ease,opacity .3s ease}
 
-  .slot[data-own="0"] .shot img{filter:grayscale(1) contrast(.85) brightness(.85);opacity:.55}
-  :root[data-theme="dark"] .slot[data-own="0"] .shot img{filter:grayscale(1) contrast(.82) brightness(.72);opacity:.62}
-  .slot[data-own="0"]{border-style:dashed;border-color:var(--edge)}
-  .slot[data-own="0"] .meta{opacity:.6}
-  .slot[data-own="1"]{border-color:var(--gold);border-style:solid;background:var(--slotOwn)}
-  .slot[data-own="1"] .shot img{filter:none;opacity:1}
-  .slot[data-own="2"]{border-color:var(--rose);border-style:solid}
-  .slot[data-own="2"] .shot img{filter:grayscale(.55);opacity:.85}
+  /* 未入手＝原本嘅彩色，圖鑑先似個圖鑑。
+     已入手＝相暗少少再㧬個綠印，好似集印仔咁。 */
+  .slot[data-own="0"]{border-color:var(--ink3)}
+  .slot[data-own="1"]{border-color:var(--ok);background:var(--slotOwn)}
+  .slot[data-own="1"] .shot img{filter:brightness(.78) saturate(.85)}
+  .slot[data-own="1"] .shot::after{content:'';position:absolute;inset:0;z-index:1;
+    background:var(--ok);opacity:.09;pointer-events:none}
+  .slot[data-own="2"]{border-color:var(--rose);border-style:dashed}
+  .slot[data-own="2"] .shot img{filter:saturate(.7)}
 
   .slot .fallback{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     flex-direction:column;gap:.375rem;background:radial-gradient(circle at 50% 38%,var(--c1) 0%,var(--c2) 100%)}
@@ -107,13 +103,14 @@ tailwind.config = {
   .slot .fallback b{font-family:'Zen Maru Gothic',sans-serif;font-size:2.4rem;font-weight:900;
     color:rgba(40,30,20,.66);line-height:1}
   .slot .fallback span{font-size:.62rem;letter-spacing:.06em;color:rgba(40,30,20,.55)}
-  .slot[data-own="0"].noimg .fallback{filter:grayscale(1) brightness(.88)}
+  .slot[data-own="1"].noimg .fallback{filter:brightness(.78) saturate(.85)}
 
-  .seal{position:absolute;top:.5rem;right:.5rem;z-index:2;width:1.875rem;height:1.875rem;border-radius:50%;
-    display:grid;place-items:center;font-size:.85rem;background:var(--gold);color:var(--sealInk);
-    box-shadow:0 2px 10px var(--shadow);font-weight:700}
+  .seal{position:absolute;top:.4rem;right:.4rem;z-index:3;
+    display:flex;align-items:center;gap:.2rem;padding:.16rem .5rem .16rem .38rem;
+    border-radius:99px;font-size:.62rem;font-weight:700;white-space:nowrap;
+    background:var(--ok);color:#fff;box-shadow:0 .12rem .5rem var(--shadow)}
+  .seal b{font-size:.72rem;line-height:1}
   .seal.want{background:var(--rose)}
-  .seal.dup{background:var(--mint)}
   @media (prefers-reduced-motion:no-preference){.seal{animation:pop .28s cubic-bezier(.2,1.5,.4,1)}}
   @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
 
@@ -241,19 +238,23 @@ tailwind.config = {
     background:var(--gold);color:var(--sealInk);font-size:.65rem;font-weight:700}
 
   /* ── 角色橫列 ──────────────────────────────────── */
-  .charbar{display:flex;flex-wrap:wrap;gap:.4rem;padding-bottom:.35rem}
-  .charbar button{display:flex;align-items:center;gap:.4rem;flex-shrink:0;
-    padding:.2rem .7rem .2rem .2rem;border-radius:99px;border:1px solid var(--ink3);
-    background:var(--ink2);color:var(--paper);font-size:.78rem;font-weight:500;
-    white-space:nowrap;transition:.14s}
-  .charbar button:hover{border-color:var(--edgeHi)}
-  .charbar button[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);
-    color:var(--sealInk);font-weight:700}
-  .charbar button .n{font-size:.65rem;opacity:.55;font-variant-numeric:tabular-nums}
-  .charbar button[aria-pressed="true"] .n{opacity:.75}
-  /* 每隻角色一抹自己嘅顏色，掃過去認得快啲 */
-  .charbar button i{width:.5rem;height:.5rem;border-radius:50%;align-self:center;
-    background:var(--dot,var(--dim));flex-shrink:0}
+  .charbar{display:grid;grid-template-columns:repeat(auto-fill,minmax(4.5rem,1fr));
+    gap:.35rem;margin-bottom:.9rem}
+  .charbar button{display:flex;flex-direction:column;align-items:center;gap:.28rem;
+    padding:.5rem .2rem .45rem;border-radius:.85rem;border:1px solid transparent;
+    background:transparent;color:var(--dim);transition:.14s;min-width:0}
+  .charbar button .ava{width:3.2rem;height:3.2rem;transition:transform .14s,box-shadow .14s}
+  .charbar button>span{font-size:.72rem;line-height:1.15;text-align:center;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .charbar button em{font-style:normal;font-size:.62rem;opacity:.6;line-height:1;
+    font-variant-numeric:tabular-nums}
+  .charbar button:hover{background:var(--slot)}
+  .charbar button:hover .ava{transform:scale(1.06)}
+  .charbar button[aria-pressed="true"]{background:var(--slotOwn);border-color:var(--gold);
+    color:var(--paper);font-weight:700}
+  .charbar button[aria-pressed="true"] .ava{box-shadow:0 0 0 .17rem var(--gold)}
+  .charbar button[aria-pressed="true"] em{opacity:.85}
+  .charbar button.lead .ava{box-shadow:0 0 0 .1rem var(--edge)}
 
   .iconbtn{width:1.9rem;height:1.9rem;border-radius:.44rem;border:1px solid var(--ink3);
     background:var(--ink2);color:var(--dim);display:grid;place-items:center;font-size:.8rem;font-weight:700}
@@ -272,11 +273,6 @@ tailwind.config = {
         <h1 class="font-round font-black text-[1.4rem] leading-none tracking-tight">吉伊卡哇 周邊圖鑑</h1>
         <p class="text-dim text-[.72rem] mt-1">ちいかわ Collection Log</p>
       </div>
-      <div class="flex items-center gap-1 order-3 sm:order-none">
-        <button class="iconbtn" id="zOut" title="縮細" aria-label="縮細">－</button>
-        <button class="iconbtn" id="zIn" title="放大" aria-label="放大">＋</button>
-        <button class="iconbtn ml-1" id="themeBtn" title="白雪／黑夜" aria-label="轉主題"></button>
-      </div>
       <div class="flex items-center gap-4">
         <div class="text-right leading-none">
           <div class="font-round font-black text-gold text-[1.6rem]" id="statOwned">0</div>
@@ -288,7 +284,6 @@ tailwind.config = {
         </div>
       </div>
     </div>
-    <div class="ribbon mt-3 max-h-[26px] overflow-hidden" id="ribbon" title="每格代表一件，金色＝已入手"></div>
   </div>
   <nav class="max-w-[1180px] mx-auto px-4 flex gap-6" role="tablist">
     <button class="tabbtn" role="tab" aria-selected="true" data-tab="dex">圖鑑</button>
@@ -443,6 +438,21 @@ tailwind.config = {
     <div class="bar my-2"><span id="quotaBar" style="width:0%"></span></div>
     <p class="text-dim text-[.75rem]" id="quotaText"></p>
     <p class="text-dim text-[.72rem] mt-2">影嘅相會自動縮到 640px、轉 JPEG 先存，慳位。</p>
+  </div>
+
+  <div class="bg-ink2 border border-ink3 rounded-xl p-4">
+    <h3 class="font-round font-bold mb-3">外觀</h3>
+    <div class="flex items-center justify-between gap-3 mb-3">
+      <span class="text-dim text-[.8rem]">主題</span>
+      <button class="btn btn-ghost" id="themeBtn"></button>
+    </div>
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-dim text-[.8rem]">字體同卡片大細</span>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost !px-4" id="zOut">－</button>
+        <button class="btn btn-ghost !px-4" id="zIn">＋</button>
+      </div>
+    </div>
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
@@ -1303,10 +1313,9 @@ function card(it) {
   el.style.setProperty('--c2', c2);
   el.setAttribute('aria-label', it.name + '（' + ['未入手', '已入手', '想要'][s] + '）');
 
-  const seal = s === 1 ? `<span class="seal${q > 1 ? ' dup' : ''}">✓</span>`
-             : s === 2 ? `<span class="seal want">♡</span>` : '';
-  const badges = (isNew(it) ? `<span class="qty !border-mint !text-mint">新</span>` : '')
-               + (s === 1 && q > 1 ? `<span class="qty">×${q}</span>` : '');
+  const seal = s === 1 ? `<span class="seal"><b>✓</b>已擁有${q > 1 ? ' ×' + q : ''}</span>`
+             : s === 2 ? `<span class="seal want"><b>♡</b>想要</span>` : '';
+  const badges = (isNew(it) ? `<span class="qty !border-mint !text-mint">新</span>` : '');
   const kb = it.type === 'kuji' ? `<span class="kujibadge">${esc(it.prize || 'くじ')}</span>` : '';
 
   el.innerHTML = `
@@ -1371,14 +1380,6 @@ function refresh() {
   $('#statTotal').textContent = all;
   $('#statPct').textContent = all ? Math.round(allOwn / all * 100) + '%' : '0%';
 
-  const rb = $('#ribbon'); rb.replaceChildren();
-  const fr = document.createDocumentFragment();
-  for (const it of list.slice(0, 360)) {
-    const i = document.createElement('i'); const s = st(it.id);
-    if (s === 1) i.className = 'on'; else if (s === 2) i.className = 'want';
-    i.title = it.name; fr.appendChild(i);
-  }
-  rb.appendChild(fr);
 
   renderControls();
   renderLogs(); renderStats(); renderQuota();
