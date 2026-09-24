@@ -470,15 +470,19 @@ tailwind.config = {
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
     <h3 class="font-round font-bold mb-1">AI 影相認嘢</h3>
     <p class="text-dim text-[.78rem] mb-3">
-      影張相或者揀張相，交畀 Claude 睇係邊隻，然後幫你喺圖鑑度搵返。
-      要用你自己嘅 Anthropic API key。
+      影張相或者揀張相，交畀 Gemini Flash 睇係邊隻，然後幫你喺圖鑑度搵返。
+      要用你自己嘅 Google Gemini API key（<span class="text-mint">aistudio.google.com</span> 攞）。
       <b class="text-rose">個 key 淨係存喺呢部機嘅瀏覽器，唔會入到 GitHub。</b>
       但個網係公開嘅，唔好喺公用電腦填。
     </p>
-    <label class="block mb-2"><span class="text-dim text-[.72rem]">API key（sk-ant-…）</span>
+    <label class="block mb-2"><span class="text-dim text-[.72rem]">API key（AIza…）</span>
       <input id="aiKey" type="password" class="field mt-1" autocomplete="off" placeholder="留空即係唔用呢個功能"></label>
-    <label class="block mb-3"><span class="text-dim text-[.72rem]">Model</span>
-      <input id="aiModel" class="field mt-1" placeholder="claude-sonnet-5"></label>
+    <label class="block mb-1"><span class="text-dim text-[.72rem]">Model</span>
+      <input id="aiModel" class="field mt-1" placeholder="gemini-3.6-flash"></label>
+    <p class="text-dim text-[.72rem] mb-3">
+      Gemini 2.5 系列 2026 年 10 月停用，所以預設用 <code class="text-mint">gemini-3.6-flash</code>。
+      將來出新版就喺呢度改個名，唔使改 code。
+    </p>
     <div class="flex gap-2 items-center">
       <button class="btn btn-gold" id="aiSave">儲存</button>
       <span class="text-dim text-[.75rem]" id="aiDot"></span>
@@ -1096,18 +1100,18 @@ $('#avaReset').onclick = () => {
 
 
 /* ══ 影相認嘢 ═══════════════════════════════════════════════
-   個網 host 喺 GitHub Pages，用唔到 Claude app 內置嗰個 API，
-   所以要你自己嘅 Anthropic key。key 存喺瀏覽器，唔會入 repo。
+   個網係純靜態，冇後端，所以要你自己嘅 Google Gemini API key。
+   key 存喺瀏覽器，唔會入 repo。
 
-   流程：影相 → 縮到 768px → 叫 Claude 講返係邊隻角色、咩類別、
+   流程：影相 → 縮到 768px → 叫 Gemini Flash 講返係邊隻角色、咩類別、
    有咩特徵 → 用呢啲字喺圖鑑度計分搵返 → 你揀返邊件先入手。
 
-   點解唔叫 AI 直接揀？圖鑑成 9000 件，好多隻樣similar到分唔開，
+   點解唔叫 AI 直接揀？圖鑑成 9000 件，好多款樣衰到分唔開，
    AI 亂揀一件你都唔知佢錯。所以 AI 負責「描述」，配對同決定留返俾你。
    次序照你講：官方圖鑑行先，跟住自訂，兩樣都冇先開新。
 ═════════════════════════════════════════════════════════════ */
 const K_AI = 'ck.ai';
-let AI = Object.assign({ key: '', model: 'claude-sonnet-5' }, read(K_AI, {}));
+let AI = Object.assign({ key: '', model: 'gemini-3.6-flash' }, read(K_AI, {}));
 let scanPhoto = null;        // 縮好嘅 data URI，認到之後攞嚟做打卡相
 let pendingNew = null;       // 「新開一件」時記住張相
 
@@ -1116,7 +1120,7 @@ function aiStatus() {
 }
 $('#aiSave').onclick = () => {
   AI.key = $('#aiKey').value.trim();
-  AI.model = $('#aiModel').value.trim() || 'claude-sonnet-5';
+  AI.model = $('#aiModel').value.trim() || 'gemini-3.6-flash';
   write(K_AI, AI); aiStatus(); toast('已儲存');
 };
 
@@ -1139,41 +1143,58 @@ function shrink(file, max = 768, q = 0.82) {
   });
 }
 
-async function askClaude(dataURL) {
-  const chars = (OPTS.char || []).join('、');
-  const cats = (OPTS.sub || []).slice(0, 40).join('、');
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+/* Gemini 嘅 responseSchema 可以鎖死 JSON 格式，唔使再靠 prompt 求佢
+   唔好用 markdown 圍住，亦都唔使自己剝 ``` 。
+   character／category 用 enum 鎖死喺圖鑑實際有嘅值，
+   佢就唔會作一個圖鑑入面唔存在嘅角色名出嚟。 */
+async function askGemini(dataURL) {
+  const chars = (OPTS.char || []);
+  const cats = (OPTS.sub || []).slice(0, 60);
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(AI.model)}:generateContent`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': AI.key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
+      'x-goog-api-key': AI.key,        // 放 header 唔放 query，個 key 就唔會入 URL 同 log
     },
     body: JSON.stringify({
-      model: AI.model,
-      max_tokens: 600,
-      system: '你係吉伊卡哇（ちいかわ）周邊嘅辨識助手。淨係回傳 JSON，唔好有任何其他文字、唔好用 markdown 圍住。',
-      messages: [{
+      systemInstruction: { parts: [{ text: '你係吉伊卡哇（ちいかわ）周邊嘅辨識助手。' }] },
+      contents: [{
         role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: dataURL.split(',')[1] } },
-          { type: 'text', text:
-`睇吓相入面係邊件吉伊卡哇周邊，回傳呢個 JSON：
-{"character":"", "category":"", "features":"", "text":"", "keywords":[]}
-
-character：淨係可以揀呢啲其中一個，揀唔到就留空 —— ${chars}
-category：淨係可以揀呢啲其中一個，揀唔到就留空 —— ${cats}
+        parts: [
+          { inline_data: { mime_type: 'image/jpeg', data: dataURL.split(',')[1] } },
+          { text:
+`睇吓相入面係邊件吉伊卡哇周邊。
+character：認到就揀返清單入面嗰個，認唔到就留空字串
+category：同上
 features：一句話講外觀（顏色、造型、配件、姿勢），用繁體中文
-text：相入面見到嘅字（日文原文照抄），冇就留空
+text：相入面見到嘅字（日文原文照抄），冇就留空字串
 keywords：3 至 8 個搜尋關鍵字，日文同中文都可以，例如造型名、系列名、節日` },
         ],
       }],
+      generationConfig: {
+        temperature: 0,
+        maxOutputTokens: 800,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            character: { type: 'STRING', enum: ['', ...chars] },
+            category:  { type: 'STRING', enum: ['', ...cats] },
+            features:  { type: 'STRING' },
+            text:      { type: 'STRING' },
+            keywords:  { type: 'ARRAY', items: { type: 'STRING' } },
+          },
+          required: ['character', 'category', 'features', 'text', 'keywords'],
+          propertyOrdering: ['character', 'category', 'features', 'text', 'keywords'],
+        },
+      },
     }),
   });
-  if (!r.ok) throw new Error('HTTP ' + r.status + '　' + (await r.text()).slice(0, 200));
-  const j = await r.json();
-  const txt = (j.content || []).map(c => c.text || '').join('').replace(/```json|```/g, '').trim();
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(j?.error?.message || `HTTP ${r.status}`);
+  const txt = (j?.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
+  if (!txt) throw new Error('Gemini 冇回嘢（可能俾安全過濾擋咗，或者 maxOutputTokens 唔夠）');
   return JSON.parse(txt);
 }
 
@@ -1194,7 +1215,7 @@ function rank(g) {
 function scanOpen() {
   if (!AI.key) {
     $('#scanBody').innerHTML = `<p class="text-dim text-[.85rem] leading-relaxed">
-      呢個功能要你自己嘅 Anthropic API key。去「資料」分頁 → <b>AI 影相認嘢</b> 入咗先。
+      呢個功能要你自己嘅 Google Gemini API key。去「資料」分頁 → <b>AI 影相認嘢</b> 入咗先。
       個 key 淨係存喺呢部機嘅瀏覽器，唔會入到 GitHub。</p>`;
     return $('#scan').showModal();
   }
@@ -1217,9 +1238,9 @@ async function scanRun(file) {
   } catch { return toast('讀唔到張相'); }
   $('#scanBody').innerHTML = `
     <img src="${esc(scanPhoto)}" alt="" class="w-full max-h-[14rem] object-contain rounded-xl mb-4">
-    <p class="text-dim text-[.85rem]">叫緊 Claude 睇…</p>`;
+    <p class="text-dim text-[.85rem]">叫緊 Gemini 睇…</p>`;
   let g;
-  try { g = await askClaude(scanPhoto); }
+  try { g = await askGemini(scanPhoto); }
   catch (e) {
     $('#scanBody').innerHTML += `<p class="text-rose text-[.8rem] mt-3 break-all">認唔到：${esc(e.message)}</p>`;
     return;

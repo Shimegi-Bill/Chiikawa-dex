@@ -325,25 +325,34 @@ Sheet 有兩張表：`data`（機器讀）同 `收藏一覽`（你睇嘅）。
 
 ## 7　AI 影相認公仔
 
-「資料」分頁入你自己嘅 Anthropic API key（存喺瀏覽器，唔會入 repo），
-之後圖鑑頁就會有粒相機掣。
+「資料」分頁入你自己嘅 **Google Gemini API key**（[aistudio.google.com](https://aistudio.google.com)
+免費攞，存喺瀏覽器，唔會入 repo），之後圖鑑頁就會有粒相機掣。
 
-流程：影相 → 縮到 768px → 叫 Claude 講返係邊隻角色、咩類別、有咩特徵 →
+流程：影相 → 縮到 768px → 叫 Gemini Flash 講返係邊隻角色、咩類別、有咩特徵 →
 用呢啲字喺圖鑑度計分搵返最似嗰 12 件 → 你揀返邊件 → 自動標做已入手，
 順便將張相設做打卡相。
 
-**點解唔叫 AI 直接揀？** 圖鑑成 9000 件，好多款樣衰到分唔開，
-AI 亂揀一件你都唔知佢錯。所以 AI 負責「描述」，配對同最後決定留返俾你。
+**點解唔叫 AI 直接揀？** 圖鑑成 9000 件，好多款只係角色唔同、造型幾乎一樣，
+AI 亂揀一件你根本唔知佢錯，錯咗仲會污染你個收藏紀錄。
+所以 AI 負責「描述」，配對同最後決定留返俾你。
 
-配對次序照你要求：官方圖鑑行先（評分 +0.5），跟住自訂圖鑑，
+配對次序照要求：官方圖鑑行先（評分 +0.5），跟住自訂圖鑑，
 兩樣都搵唔到就撳「都唔係，開新一件」——
 會用 AI 認到嘅角色同類別預先填好編輯器，張相亦都會跟埋。
 
-**要知嘅**：API key 擺喺瀏覽器本身有風險。
-用一支有 spend limit 嘅 key，唔好同其他嘢共用。
-每次認一件大概用幾百 token，成本好細。
+### 技術細節
 
----
+- Endpoint：`POST /v1beta/models/{model}:generateContent`
+- Key 放 `x-goog-api-key` header，唔放 query string，咁就唔會入 URL 同 log
+- 用 `responseSchema` 鎖死 JSON 格式，唔使靠 prompt 求佢唔好用 markdown 圍住
+- `character` / `category` 用 **enum 鎖死喺你圖鑑實際有嘅值**，
+  佢就唔會作一個圖鑑入面唔存在嘅角色名出嚟
+- 預設 `gemini-3.6-flash`。Gemini 2.5 系列 2026 年 10 月停用，唔好再用。
+  將來出新版就喺「資料」分頁改個名，唔使改 code
+
+**要知嘅**：API key 擺喺瀏覽器本身有風險。去 Google Cloud Console 幫支 key
+設 API 限制（淨係開 Generative Language API）同用量上限，唔好同其他嘢共用。
+每次認一件大概幾百 token。
 
 ## 8　瀏覽器儲存
 
