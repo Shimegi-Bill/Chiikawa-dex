@@ -539,7 +539,8 @@ tailwind.config = {
 
   <p class="text-dim text-[.72rem] text-center pt-1 pb-6 leading-relaxed">
     吉伊卡哇 周邊圖鑑　<span id="verText"></span><br>
-    Developed by Bill Chiu
+    Developed by Bill Chiu<br>
+    <button class="btn btn-ghost mt-3" id="checkUpdate">檢查更新</button>
   </p>
 </section>
 
@@ -834,7 +835,7 @@ function dropdown(host, { opts, value, prefix = '', onPick, highlight = false })
      region place release_date price type image image_remote url first_seen
    character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
-const VERSION = 'v1.8.0（2026-09-24）';
+const VERSION = 'v1.8.1（2026-09-24）';
 const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
       K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
 
@@ -1197,7 +1198,7 @@ keywords：3 至 8 個搜尋關鍵字，日文同中文都可以，例如造型�
     }),
   });
   const j = await r.json().catch(() => null);
-  if (!r.ok) throw new Error(j?.error?.message || `HTTP ${r.status}`);
+  if (!r.ok) throw new Error((j?.error?.message || `HTTP ${r.status}`) + `　〔${VERSION}〕`);
   const txt = (j?.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
   if (!txt) throw new Error('Gemini 冇回嘢（可能俾安全過濾擋咗，或者 maxOutputTokens 唔夠）');
   const g = JSON.parse(txt);
@@ -2402,6 +2403,27 @@ $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
 $('#verText').textContent = VERSION;
+
+/* 加咗去主畫面之後冇網址列、冇重新整理掣，iOS 會一直用住舊版；
+   GitHub Pages 本身又有 10 分鐘 CDN cache。
+   做法：去攞一次最新嘅 index.html（加時間戳避開 cache），
+   比較版本號，唔同就帶住時間戳重新載入。 */
+$('#checkUpdate').onclick = async () => {
+  const btn = $('#checkUpdate');
+  btn.disabled = true; btn.textContent = '檢查緊…';
+  try {
+    const r = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+    const html = await r.text();
+    const latest = html.match(/const VERSION = '([^']+)'/)?.[1];
+    if (!latest) throw new Error('讀唔到版本號');
+    if (latest === VERSION) { toast('已經係最新：' + VERSION); }
+    else {
+      toast(`有新版 ${latest}，載入緊…`);
+      setTimeout(() => location.replace(location.pathname + '?v=' + Date.now()), 600);
+    }
+  } catch (e) { toast('檢查唔到：' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '檢查更新'; }
+};
 $('#aiKey').value = AI.key; $('#aiModel').value = AI.model; aiStatus();
 applyTheme(localStorage.getItem('ck.theme') || 'light');
 applyZoom(curZoom());
