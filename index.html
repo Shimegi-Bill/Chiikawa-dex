@@ -173,7 +173,23 @@ tailwind.config = {
   .avapool{display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem 0 .2rem 3rem}
   .avapool button{width:2.6rem;height:2.6rem;border-radius:50%;overflow:hidden;
     border:2px solid transparent;background:var(--slot)}
-  .avapool button[aria-pressed="true"]{border-color:var(--gold)}
+  .icoctl{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--dim)}
+  .icoctl span{width:2rem;flex-shrink:0}
+  .icoctl input[type=range]{flex:1;min-width:0;accent-color:var(--gold)}
+  .icoctl input[type=color]{width:2.2rem;height:1.6rem;border:1px solid var(--ink3);
+    border-radius:.4rem;background:none;padding:0}
+  #icoDl button:disabled{opacity:.4}
+
+  /* 揀中嗰張要一眼睇到：金框、放大少少、角落一個剔 */
+  .avapool button{position:relative;transition:transform .15s,border-color .15s}
+  .avapool button[aria-pressed="true"]{border-color:var(--gold);transform:scale(1.12);
+    box-shadow:0 0 0 .15rem var(--gold)}
+  .avapool button[aria-pressed="true"]::after{content:'✓';position:absolute;right:-.1rem;bottom:-.1rem;
+    width:1.05rem;height:1.05rem;border-radius:50%;background:var(--gold);color:var(--sealInk);
+    font-size:.62rem;font-weight:900;display:grid;place-items:center;
+    border:.1rem solid var(--ink2)}
+  .avapool button{overflow:visible}
+  .avapool button img{border-radius:50%}
   .avapool img{width:100%;height:100%;object-fit:cover;object-position:50% 35%}
 
   .tag{font-size:.75rem;padding:.25rem .7rem;border-radius:99px;border:1px solid var(--ink3);
@@ -502,6 +518,34 @@ tailwind.config = {
         <button class="btn btn-ghost !px-4" id="zIn">＋</button>
       </div>
     </div>
+  </div>
+
+  <div class="bg-ink2 border border-ink3 rounded-xl p-4">
+    <h3 class="font-round font-bold mb-1">主畫面圖示</h3>
+    <p class="text-dim text-[.78rem] mb-3">
+      揀一張你自己影嘅公仔相，調好位置，下載三個檔上傳去 repo root
+      （覆蓋原本嗰三個），然後喺主畫面刪咗個 app 再加過一次。
+    </p>
+    <div class="flex gap-4 items-start">
+      <div class="shrink-0 text-center">
+        <canvas id="icoPrev" width="360" height="360"
+          class="w-[7.5rem] h-[7.5rem] rounded-[22%] border border-ink3 bg-ink"></canvas>
+        <p class="text-dim text-[.66rem] mt-1">iPhone 效果</p>
+      </div>
+      <div class="flex-1 min-w-0 space-y-2">
+        <button class="btn btn-gold w-full" id="icoPick">揀相／影相</button>
+        <label class="icoctl"><span>放大</span><input type="range" id="icoZoom" min="1" max="3" step="0.01" value="1.25"></label>
+        <label class="icoctl"><span>上下</span><input type="range" id="icoY" min="-0.6" max="0.6" step="0.01" value="0"></label>
+        <label class="icoctl"><span>左右</span><input type="range" id="icoX" min="-0.6" max="0.6" step="0.01" value="0"></label>
+        <label class="icoctl"><span>底色</span><input type="color" id="icoBg" value="#F3EBD9"></label>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mt-3" id="icoDl">
+      <button class="btn btn-ghost text-[.7rem] !px-1" data-f="apple-touch-icon.png" disabled>apple-touch-icon</button>
+      <button class="btn btn-ghost text-[.7rem] !px-1" data-f="icon.png" disabled>icon</button>
+      <button class="btn btn-ghost text-[.7rem] !px-1" data-f="icon-maskable.png" disabled>icon-maskable</button>
+    </div>
+    <input type="file" id="icoFile" accept="image/*" class="hidden">
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
@@ -835,7 +879,7 @@ function dropdown(host, { opts, value, prefix = '', onPick, highlight = false })
      region place release_date price type image image_remote url first_seen
    character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
-const VERSION = 'v1.8.1（2026-09-24）';
+const VERSION = 'v1.8.2（2026-09-24）';
 const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
       K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
 
@@ -1060,7 +1104,7 @@ function renderAvaPicker() {
           <span class="ava" style="--c1:${c1};--c2:${c2}"><b>${esc(c[0])}</b>${
             src ? `<img src="${esc(src)}" alt="">` : ''}</span>
           <span class="text-[.84rem] font-bold">${esc(c)}</span>
-          <span class="text-dim text-[.72rem]">${AVA_PICK[c] ? '自己揀' : '自動'}</span>
+          <span class="mode text-[.72rem] ${AVA_PICK[c] ? 'text-gold font-bold' : 'text-dim'}">${AVA_PICK[c] ? '✓ 自己揀' : '自動'}</span>
         </button>
       </div>
       <div class="avapool hidden"></div>`;
@@ -1080,10 +1124,29 @@ function renderAvaPicker() {
           b.setAttribute('aria-pressed', String(AVA_PICK[c] === x.id));
           b.innerHTML = `<img src="${esc(x.image || x.image_remote)}" alt="" loading="lazy" referrerpolicy="no-referrer">`;
           b.onclick = () => {
-            if (AVA_PICK[c] === x.id) delete AVA_PICK[c]; else AVA_PICK[c] = x.id;
+            const on = AVA_PICK[c] !== x.id;          // 撳返已揀嗰張＝改返自動
+            if (on) AVA_PICK[c] = x.id; else delete AVA_PICK[c];
             write(K_AVAPICK, AVA_PICK);
             delete AVA_CACHE[c]; write(K_AVA, AVA_CACHE, true);
-            AVA_VER++; buildAvatars(); renderCharBar(); renderAvaPicker();
+            AVA_VER++; buildAvatars();
+
+            /* 就地更新，唔好 renderAvaPicker() 成個重建 ——
+               一重建啲候選相就會收埋，你就睇唔到自己揀咗邊張。 */
+            pool.querySelectorAll('button').forEach(o =>
+              o.setAttribute('aria-pressed', String(on && o === b)));
+            const head = row.querySelector('.avarow .ava');
+            head.querySelector('img')?.remove();
+            const now = on ? (x.image || x.image_remote) : avaSrc(c);
+            if (now) head.insertAdjacentHTML('beforeend',
+              `<img src="${esc(now)}" alt="" referrerpolicy="no-referrer">`);
+            const mode = row.querySelector('.mode');
+            mode.textContent = on ? '✓ 自己揀' : '自動';
+            mode.className = 'mode text-[.72rem] ' + (on ? 'text-gold font-bold' : 'text-dim');
+            head.animate([{ transform: 'scale(1.18)' }, { transform: 'scale(1)' }],
+                         { duration: 260, easing: 'ease-out' });
+
+            renderControls();                          // 同步埋上面嗰排角色
+            toast(on ? `${c}：用呢張做頭像` : `${c}：改返自動揀`);
           };
           return b;
         }));
@@ -1093,10 +1156,74 @@ function renderAvaPicker() {
     return row;
   }));
 }
+/* ══ 主畫面圖示產生器 ═══════════════════════════════════════
+   用你自己影嘅公仔相做 icon。全部喺瀏覽器做，張相唔會上傳去邊度。
+   出三個檔：
+     apple-touch-icon.png  180px  iPhone（iOS 自己會切圓角，所以滿版）
+     icon.png              512px  Android
+     icon-maskable.png     512px  Android 適應形狀 —— 系統會裁成圓形／
+                                  方圓形等等，所以相要縮入中間 80% 安全區
+═══════════════════════════════════════════════════════════ */
+let icoImg = null;
+const ICO = [
+  { f: 'apple-touch-icon.png', S: 180, pad: 0 },
+  { f: 'icon.png',             S: 512, pad: 0 },
+  { f: 'icon-maskable.png',    S: 512, pad: 0.1 },
+];
+
+function drawIcon(ctx, S, pad) {
+  const zoom = +$('#icoZoom').value, dx = +$('#icoX').value, dy = +$('#icoY').value;
+  ctx.fillStyle = $('#icoBg').value;
+  ctx.fillRect(0, 0, S, S);
+  if (!icoImg) return;
+  const inner = S * (1 - pad * 2);
+  const k = Math.max(inner / icoImg.width, inner / icoImg.height) * zoom;
+  const w = icoImg.width * k, h = icoImg.height * k;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(icoImg, S / 2 - w / 2 + dx * inner, S / 2 - h / 2 + dy * inner, w, h);
+}
+
+function drawIcoPreview() {
+  const cv = $('#icoPrev');
+  drawIcon(cv.getContext('2d'), cv.width, 0);
+  $$('#icoDl button').forEach(b => b.disabled = !icoImg);
+}
+
+$('#icoPick').onclick = () => $('#icoFile').click();
+$('#icoFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    icoImg = img;
+    // 公仔相塊面通常喺中間偏上，預設向上移少少
+    $('#icoZoom').value = 1.25; $('#icoX').value = 0; $('#icoY').value = 0.06;
+    drawIcoPreview(); toast('拉吓啲掣，將塊面擺正中');
+  };
+  img.onerror = () => toast('讀唔到呢張相');
+  img.src = url;
+  e.target.value = '';
+});
+['#icoZoom', '#icoX', '#icoY', '#icoBg'].forEach(s => $(s).addEventListener('input', drawIcoPreview));
+
+$$('#icoDl button').forEach(b => b.onclick = () => {
+  const spec = ICO.find(x => x.f === b.dataset.f);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = spec.S;
+  drawIcon(cv.getContext('2d'), spec.S, spec.pad);
+  cv.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = spec.f; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    b.textContent = '✓ ' + b.textContent.replace(/^✓ /, '');
+  }, 'image/png');
+});
+drawIcoPreview();
+
 $('#avaReset').onclick = () => {
   AVA_PICK = {}; write(K_AVAPICK, AVA_PICK);
   AVA_CACHE = {}; write(K_AVA, AVA_CACHE, true);
-  AVA_VER++; buildAvatars(); renderCharBar(); renderAvaPicker(); toast('改返自動');
+  AVA_VER++; buildAvatars(); renderControls(); renderAvaPicker(); toast('全部改返自動');
 };
 
 
