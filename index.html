@@ -1148,8 +1148,13 @@ function shrink(file, max = 768, q = 0.82) {
    character／category 用 enum 鎖死喺圖鑑實際有嘅值，
    佢就唔會作一個圖鑑入面唔存在嘅角色名出嚟。 */
 async function askGemini(dataURL) {
-  const chars = (OPTS.char || []);
-  const cats = (OPTS.sub || []).slice(0, 60);
+  /* Gemini 嘅 enum 唔准有空字串（會彈 enum[0]: cannot be empty），
+     所以用「未知」做「認唔到」嘅標記，返嚟再換返做空。
+     順手清走空值同重複 —— 重複嘅 enum 值一樣會俾佢拒絕。 */
+  const UNKNOWN = '未知';
+  const clean = arr => [...new Set(arr.map(s => String(s || '').trim()).filter(s => s && s !== UNKNOWN))];
+  const chars = clean(OPTS.char || []);
+  const cats = clean(OPTS.sub || []).slice(0, 60);
   const r = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(AI.model)}:generateContent`, {
     method: 'POST',
@@ -1165,7 +1170,7 @@ async function askGemini(dataURL) {
           { inline_data: { mime_type: 'image/jpeg', data: dataURL.split(',')[1] } },
           { text:
 `睇吓相入面係邊件吉伊卡哇周邊。
-character：認到就揀返清單入面嗰個，認唔到就留空字串
+character：認到就揀返清單入面嗰個，認唔到就揀「未知」
 category：同上
 features：一句話講外觀（顏色、造型、配件、姿勢），用繁體中文
 text：相入面見到嘅字（日文原文照抄），冇就留空字串
@@ -1179,8 +1184,8 @@ keywords：3 至 8 個搜尋關鍵字，日文同中文都可以，例如造型�
         responseSchema: {
           type: 'OBJECT',
           properties: {
-            character: { type: 'STRING', enum: ['', ...chars] },
-            category:  { type: 'STRING', enum: ['', ...cats] },
+            character: { type: 'STRING', enum: [UNKNOWN, ...chars] },
+            category:  { type: 'STRING', enum: [UNKNOWN, ...cats] },
             features:  { type: 'STRING' },
             text:      { type: 'STRING' },
             keywords:  { type: 'ARRAY', items: { type: 'STRING' } },
@@ -1195,7 +1200,9 @@ keywords：3 至 8 個搜尋關鍵字，日文同中文都可以，例如造型�
   if (!r.ok) throw new Error(j?.error?.message || `HTTP ${r.status}`);
   const txt = (j?.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim();
   if (!txt) throw new Error('Gemini 冇回嘢（可能俾安全過濾擋咗，或者 maxOutputTokens 唔夠）');
-  return JSON.parse(txt);
+  const g = JSON.parse(txt);
+  for (const k of ['character', 'category']) if (g[k] === UNKNOWN) g[k] = '';
+  return g;
 }
 
 function rank(g) {
