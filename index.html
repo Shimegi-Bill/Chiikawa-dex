@@ -808,8 +808,16 @@ let F = { q: '', char: '', main: '', sub: '', theme: '', region: '', set: '' };
 let editingId = null;
 
 /* ── 角色字串 → 陣列（逗號分隔，去空白）───────────────── */
-const splitChars = s => String(s || '')
-  .split(/[,，、]/).map(x => x.trim()).filter(Boolean);
+/* 角色字串得二十幾種，記住咗就唔使每次都拆 ——
+   而家一次 render 會叫佢幾萬次。
+   注意：回傳嘅 array 係共用嘅，唔好改佢。 */
+const _scCache = new Map();
+const splitChars = s => {
+  const k = String(s || '');
+  let v = _scCache.get(k);
+  if (!v) { v = k.split(/[,，、]/).map(x => x.trim()).filter(Boolean); _scCache.set(k, v); }
+  return v;
+};
 
 /* 幣值符號照住 catalog 入面嗰個 code 出，唔知就標「?」，唔好扮有把握 */
 const SYM = { HKD: 'HK$', JPY: '¥', TWD: 'NT$', MOP: 'MOP$', CNY: '¥', KRW: '₩', USD: 'US$' };
@@ -1112,14 +1120,21 @@ const avaSrc = name => AVA_CACHE[name]?.data || AVATARS.get(name) || '';
 /* 角色列唔好每次 refresh 都重新砌 —— 一重砌啲 <img> 就會閃一閃，
    睇落好似「撳一下就 reload」。冧巴同選中狀態就地改就得。 */
 let charSig = '';
-function renderCharBar() {
+function renderCharBar(FC) {
   const bar = $('#charBar');
-  const sig = (OPTS.char || []).join('|') + '#' + AVA_VER + '#' + CATALOG.length;
+  // 其餘 filter 揀完之後仲有貨嘅角色先出，揀緊嗰個永遠留低
+  const chars = (OPTS.char || []).filter(c => FC.opts.char.has(c) || c === F.char);
+  const noChar = FC.opts.char.get(NO_CHAR) || 0;
+  const num = v => v === '' ? FC.totals.char
+            : v === NO_CHAR ? noChar
+            : FC.opts.char.get(v) || 0;
+
+  const sig = chars.join('|') + '#' + AVA_VER + '#' + (noChar > 0);
   if (sig === charSig && bar.children.length) {
     for (const b of bar.children) {
       b.setAttribute('aria-pressed', String(F.char === b.dataset.v));
       const em = b.querySelector('em');
-      if (em) em.textContent = b.dataset.v ? cnt('char', b.dataset.v) : CATALOG.length;
+      if (em) em.textContent = num(b.dataset.v);
     }
     return;
   }
@@ -1146,23 +1161,25 @@ function renderCharBar() {
     };
     return b;
   };
-  const noChar = CATALOG.filter(x => !splitChars(x.character).length).length;
   bar.replaceChildren(
-    chip('', '全部', CATALOG.length),
-    ...(OPTS.char || []).map((c, i) => chip(c, c, cnt('char', c), i < 3)),
-    ...(noChar ? [chip(NO_CHAR, '其他', noChar)] : []),
+    chip('', '全部', num('')),
+    ...chars.map((c, i) => chip(c, c, num(c), i < 3)),
+    ...(noChar > 0 || F.char === NO_CHAR ? [chip(NO_CHAR, '其他', num(NO_CHAR))] : []),
   );
 }
 
 function renderControls() {
   CHAR_RANK = new Map((OPTS.char || []).map((c, i) => [c, i]));
-  renderCharBar();
+  const FC = facets();          // 每個 filter 有咩揀、各有幾多件
+  renderCharBar(FC);
 
   /* ── 其餘篩選：自訂下拉 ── */
   const pick = (key) => (v) => { F[key] = v; UI.closed = {}; write(K_UI, UI); refresh(); };
+  // 選項只列「其餘 filter 揀完之後仲有貨」嗰啲，件數同樣係剩返嘅數
   const list = (key, allLabel) => [
-    { v: '', label: allLabel },
-    ...(OPTS[key] || []).map(v => ({ v, label: v, n: cnt(key, v) })),
+    { v: '', label: `${allLabel}（${FC.totals[key]}）` },
+    ...(OPTS[key] || []).filter(v => FC.opts[key].has(v))
+      .map(v => ({ v, label: v, n: FC.opts[key].get(v) })),
   ];
   dropdown('#ddMain',   { opts: list('main', '所有大類'),   value: F.main,   onPick: pick('main'),   highlight: true });
   dropdown('#ddSub',    { opts: list('sub', '所有細類'),    value: F.sub,    onPick: pick('sub'),    highlight: true });
@@ -1171,12 +1188,13 @@ function renderControls() {
 
   // 套裝可以有幾百個，所以排最新出嗰啲行先，個 menu 本身捲得
   const setOpts = [...SETS.values()]
+    .filter(s => FC.opts.set.has(s.key))
     .sort((x, y) => cmpStr(y.items.at(-1)?.release_date, x.items.at(-1)?.release_date)
       || y.items.length - x.items.length)
     .map(s => ({ v: s.key, label: s.name, n: `${setOwned(s)}/${s.items.length}` }));
   if (F.set && !SETS.has(F.set)) F.set = '';
   dropdown('#ddSet', {
-    opts: [{ v: '', label: `所有套裝（${SETS.size}）` }, ...setOpts],
+    opts: [{ v: '', label: `所有套裝（${setOpts.length}）` }, ...setOpts],
     value: F.set, highlight: true, onPick: pick('set'),
   });
 
@@ -1216,35 +1234,74 @@ function setState(id, s) {
   write(K_COL, COL); refresh();
 }
 
-/* ── 多維度篩選：幾個條件同時揀就取交集 ─────────────────── */
-function filtered() {
-  const q = F.q.trim().toLowerCase();
-  return CATALOG.filter(it => {
-    // 角色：一件嘢可以有幾個，所以用 includes 唔用 ===
-    if (F.char === NO_CHAR) { if (splitChars(it.character).length) return false; }
-    else if (F.char && !splitChars(it.character).includes(F.char)) return false;
-    if (F.main && it.main_category !== F.main) return false;
-    if (F.sub && it.sub_category !== F.sub) return false;
-    if (F.theme && it.theme !== F.theme) return false;
-    if (F.region && it.region !== F.region) return false;
-    if (F.set && it.set_key !== F.set) return false;
+/* ── 多維度篩選 ───────────────────────────────────────────
+   每個條件拆成獨立嘅 predicate，因為兩個地方要用：
+     · filtered()   —— 全部條件都要過
+     · facets()     —— 計某個 filter 嘅選項時，要跳過佢自己
+   跳過自己先啱：睇「套裝」有咩揀嗰陣，唔應該俾已揀嘅套裝限死。
+─────────────────────────────────────────────────────────── */
+const FACET_FIELD = { main: 'main_category', sub: 'sub_category', theme: 'theme', region: 'region' };
+const FACET_KEYS = ['char', 'main', 'sub', 'theme', 'region', 'set'];
 
+const PREDS = {
+  // 角色：一件嘢可以有幾個，所以用 includes 唔用 ===
+  char: it => F.char === NO_CHAR ? !splitChars(it.character).length
+            : !F.char || splitChars(it.character).includes(F.char),
+  main:   it => !F.main   || it.main_category === F.main,
+  sub:    it => !F.sub    || it.sub_category === F.sub,
+  theme:  it => !F.theme  || it.theme === F.theme,
+  region: it => !F.region || it.region === F.region,
+  set:    it => !F.set    || it.set_key === F.set,
+  view:   it => {
     const s = st(it.id);
     switch (UI.view) {
-      case 'own':  if (s !== 1) return false; break;
-      case 'miss': if (s === 1) return false; break;
-      case 'want': if (s !== 2) return false; break;
-      case 'dup':  if (!(s === 1 && qty(it.id) > 1)) return false; break;
-      case 'new':  if (!isNew(it)) return false; break;
+      case 'own':  return s === 1;
+      case 'miss': return s !== 1;
+      case 'want': return s === 2;
+      case 'dup':  return s === 1 && qty(it.id) > 1;
+      case 'new':  return isNew(it);
+      default: return true;
     }
-    if (q) {
-      const hay = [it.name, it.name_ja, it.character, it.theme, it.main_category,
-                   it.sub_category, it.region, it.place, it.kuji, it.prize]
-        .filter(Boolean).join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
+  },
+  q: it => {
+    const q = F.q.trim().toLowerCase();
+    if (!q) return true;
+    return [it.name, it.name_ja, it.character, it.theme, it.main_category,
+            it.sub_category, it.region, it.place, it.kuji, it.prize]
+      .filter(Boolean).join(' ').toLowerCase().includes(q);
+  },
+};
+const PRED_KEYS = Object.keys(PREDS);
+
+const filtered = () => CATALOG.filter(it => PRED_KEYS.every(k => PREDS[k](it)));
+
+/* 一次過計晒六個 filter 嘅可選項同件數。
+   訣竅：數吓每件嘢「肥佬咗幾多個條件」——
+     0 個 → 六個 filter 都計佢
+     1 個（而嗰個係 facet）→ 淨係嗰個 filter 計佢（因為剔走自己就過到）
+     2 個或以上 → 邊個都唔計
+   咁就唔使為每個 filter 掃足一次成個圖鑑。 */
+function facets() {
+  const opts = Object.fromEntries(FACET_KEYS.map(k => [k, new Map()]));
+  const totals = Object.fromEntries(FACET_KEYS.map(k => [k, 0]));
+  const bump = (m, k) => { if (k) m.set(k, (m.get(k) || 0) + 1); };
+  const add = (k, it) => {
+    totals[k]++;
+    if (k === 'char') {
+      const cs = splitChars(it.character);
+      if (!cs.length) bump(opts.char, NO_CHAR);      // 官網冇標角色嗰啲
+      else for (const c of cs) bump(opts.char, c);
     }
-    return true;
-  });
+    else if (k === 'set') bump(opts.set, it.set_key);
+    else bump(opts[k], it[FACET_FIELD[k]]);
+  };
+  for (const it of CATALOG) {
+    let bad = null, n = 0;
+    for (const k of PRED_KEYS) if (!PREDS[k](it) && ++n && (bad = k) && n > 1) break;
+    if (n === 0) { for (const k of FACET_KEYS) add(k, it); }
+    else if (n === 1 && FACET_KEYS.includes(bad)) add(bad, it);
+  }
+  return { opts, totals };
 }
 
 /* ── 排序 ─────────────────────────────────────────────── */
