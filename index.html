@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light">
 
 <!-- 加到主畫面：圖示同名 -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -14,20 +14,22 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="吉伊圖鑑">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#FAF6EC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1B1622" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAF6EC" id="themeColor">
 <title>吉伊卡哇 周邊圖鑑</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <script>
-  /* 喺畫面畫出嚟之前就定好主題，唔會閃一下白／黑 */
+  /* 喺畫面畫出嚟之前就定好主題，唔會閃一下。
+     三隻角色色：兔兔黃／小八藍／吉伊卡哇粉紅。
+     舊版存落嘅 light／dark／auto 一律轉返兔兔黃（即係以前個淺色）。 */
   (function () {
-    var t = localStorage.getItem('ck.theme') || 'light';
-    var dark = t === 'dark' || (t === 'auto' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    document.documentElement.dataset.pref = t;
+    var INK = { usagi: '#FAF6EC', hachiware: '#EEF4FA', chiikawa: '#FDF1F4' };
+    var t = localStorage.getItem('ck.theme');
+    if (!INK[t]) t = 'usagi';
+    document.documentElement.dataset.theme = t;
+    var m = document.getElementById('themeColor');
+    if (m) m.setAttribute('content', INK[t]);
     var z = parseFloat(localStorage.getItem('ck.zoom')) || 1;
     document.documentElement.style.setProperty('--zoom', z);
   })();
@@ -52,21 +54,33 @@ tailwind.config = {
 </script>
 <style>
   /* ── 主題 ──────────────────────────────────────────── */
-  :root[data-theme="dark"]{
-    --ink:#1B1622; --ink2:#241D2E; --ink3:#352B47;
-    --paper:#F5EFE2; --dim:#8C81A0;
-    --gold:#E8B84B; --rose:#E68DA0; --mint:#7FD3BE; --sky:#8FB8E8; --ok:#5FCF97;
-    --slot:#1F1929; --slotOwn:#2A2136; --edge:#3A3048; --edgeHi:#4A3D60;
-    --sealInk:#1B1622; --shadow:rgba(0,0,0,.45); --veil:rgba(12,9,17,.82);
-    --track:#302740; color-scheme:dark;
-  }
-  :root[data-theme="light"]{
+  /* 三個主題都係淺底，淨係換色系。
+     --gold 係「主色」（掣、選中、進度條），所以每個主題跟角色換：
+     兔兔用返原本嘅金黃、小八用藍、吉伊卡哇用粉紅。
+     粉紅主題下「想要」改用淡紫，唔係同主色撞埋一齊分唔開。 */
+  :root[data-theme="usagi"]{
     --ink:#FAF6EC; --ink2:#FFFFFF; --ink3:#E6DCC8;
     --paper:#2C2438; --dim:#7A7188;
     --gold:#B07C1E; --rose:#C4546F; --mint:#2E8F76; --sky:#3E72AE; --ok:#2E9E63;
     --slot:#F2EBDC; --slotOwn:#FFF8E6; --edge:#DED3BE; --edgeHi:#C3B394;
     --sealInk:#FFFFFF; --shadow:rgba(90,70,40,.18); --veil:rgba(60,48,30,.45);
     --track:#E6DCC8; color-scheme:light;
+  }
+  :root[data-theme="hachiware"]{
+    --ink:#EEF4FA; --ink2:#FFFFFF; --ink3:#D2E0EE;
+    --paper:#1F2D3D; --dim:#667A90;
+    --gold:#2F6DB5; --rose:#C4546F; --mint:#2E8F76; --sky:#5B7FD1; --ok:#2E9E63;
+    --slot:#E3EDF7; --slotOwn:#F3F8FD; --edge:#C9DAEB; --edgeHi:#9DBBD9;
+    --sealInk:#FFFFFF; --shadow:rgba(30,60,100,.16); --veil:rgba(20,35,60,.45);
+    --track:#D2E0EE; color-scheme:light;
+  }
+  :root[data-theme="chiikawa"]{
+    --ink:#FDF1F4; --ink2:#FFFFFF; --ink3:#F1D6DE;
+    --paper:#3A2831; --dim:#8C7180;
+    --gold:#C44C70; --rose:#8E5BB0; --mint:#2E8F76; --sky:#5E77B8; --ok:#2E9E63;
+    --slot:#FAE5EB; --slotOwn:#FFF5F8; --edge:#EDCAD4; --edgeHi:#DCA3B4;
+    --sealInk:#FFFFFF; --shadow:rgba(120,50,70,.15); --veil:rgba(70,30,45,.45);
+    --track:#F1D6DE; color-scheme:light;
   }
 
   /* ── 可放大縮細：所有尺寸都係 rem，改根字級就整體縮放 ── */
@@ -173,6 +187,18 @@ tailwind.config = {
   .avapool{display:flex;flex-wrap:wrap;gap:.4rem;padding:.5rem 0 .2rem 3rem}
   .avapool button{width:2.6rem;height:2.6rem;border-radius:50%;overflow:hidden;
     border:2px solid transparent;background:var(--slot)}
+  /* 主題揀選：三個圓形，入面係該角色嘅頭像 */
+  #themePick{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem}
+  #themePick button{display:flex;flex-direction:column;align-items:center;gap:.4rem;
+    padding:.7rem .3rem .6rem;border-radius:.85rem;border:1px solid var(--ink3);
+    background:var(--ink2);font-size:.74rem;color:var(--dim);transition:.15s}
+  #themePick .sw{position:relative;width:3rem;height:3rem;border-radius:50%;overflow:hidden;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);transition:box-shadow .15s}
+  #themePick .sw img{width:100%;height:100%;object-fit:cover;object-position:50% 35%}
+  #themePick button[aria-checked="true"]{border-color:var(--gold);background:var(--slotOwn);
+    color:var(--paper);font-weight:700}
+  #themePick button[aria-checked="true"] .sw{box-shadow:0 0 0 .2rem var(--gold)}
+
   .icoctl{display:flex;align-items:center;gap:.5rem;font-size:.74rem;color:var(--dim)}
   .icoctl span{width:2rem;flex-shrink:0}
   .icoctl input[type=range]{flex:1;min-width:0;accent-color:var(--gold)}
@@ -507,10 +533,8 @@ tailwind.config = {
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
     <h3 class="font-round font-bold mb-3">外觀</h3>
-    <div class="flex items-center justify-between gap-3 mb-3">
-      <span class="text-dim text-[.8rem]">主題</span>
-      <button class="btn btn-ghost" id="themeBtn"></button>
-    </div>
+    <p class="text-dim text-[.8rem] mb-2">主題</p>
+    <div id="themePick" class="mb-4" role="radiogroup" aria-label="主題"></div>
     <div class="flex items-center justify-between gap-3">
       <span class="text-dim text-[.8rem]">字體同卡片大細</span>
       <div class="flex gap-2">
@@ -879,7 +903,7 @@ function dropdown(host, { opts, value, prefix = '', onPick, highlight = false })
      region place release_date price type image image_remote url first_seen
    character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
-const VERSION = 'v1.8.2（2026-09-24）';
+const VERSION = 'v1.9.0（2026-09-24）';
 const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
       K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
 
@@ -1093,6 +1117,7 @@ const setOwned = s => s.items.filter(i => st(i.id) === 1).length;
 
 /* ── 資料分頁：自己揀角色頭像 ──────────────────────────── */
 function renderAvaPicker() {
+  renderThemePick();
   const host = $('#avaList');
   host.replaceChildren(...(OPTS.char || []).map(c => {
     const [c1, c2] = colorOf(c);
@@ -1522,7 +1547,7 @@ async function cacheAvatars() {
   }
   if (changed) {
     write(K_AVA, AVA_CACHE, true);
-    AVA_VER++; renderControls();
+    AVA_VER++; renderControls(); renderThemePick();
   }
 }
 const avaSrc = name => AVA_CACHE[name]?.data || AVATARS.get(name) || '';
@@ -2435,23 +2460,37 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend'])
   document.addEventListener(ev, e => e.preventDefault(), { passive: false });
 
 /* ── 主題 / 縮放 ──────────────────────────────────────── */
-const THEMES = [['light', '☀', '白雪'], ['dark', '☾', '黑夜'], ['auto', '◐', '跟系統']];
-function applyTheme(pref) {
-  const dark = pref === 'dark' || (pref === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  const r = document.documentElement;
-  r.dataset.theme = dark ? 'dark' : 'light';
-  r.dataset.pref = pref;
-  localStorage.setItem('ck.theme', pref);
-  const t = THEMES.find(x => x[0] === pref) || THEMES[0];
-  $('#themeBtn').textContent = t[1]; $('#themeBtn').title = t[2] + '（撳一下轉）';
-}
-$('#themeBtn').onclick = () => {
-  const i = THEMES.findIndex(x => x[0] === (document.documentElement.dataset.pref || 'light'));
-  applyTheme(THEMES[(i + 1) % THEMES.length][0]);
+/* ══ 主題：三隻角色色 ═════════════════════════════════════
+   冇「跟系統」，亦冇深色 —— 你自己揀一隻。
+   sw 係揀選圓形嘅底色，入面會擺返該角色嘅頭像。 */
+const THEMES = {
+  usagi:     { name: '兔兔黃',       char: '兔兔',     ink: '#FAF6EC', sw: '#F3D98A' },
+  hachiware: { name: '小八藍',       char: '小八',     ink: '#EEF4FA', sw: '#A9CBEB' },
+  chiikawa:  { name: '吉伊卡哇粉紅', char: '吉伊卡哇', ink: '#FDF1F4', sw: '#F2B6C6' },
 };
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (document.documentElement.dataset.pref === 'auto') applyTheme('auto');
-});
+function applyTheme(t) {
+  if (!THEMES[t]) t = 'usagi';
+  document.documentElement.dataset.theme = t;
+  localStorage.setItem('ck.theme', t);
+  $('#themeColor')?.setAttribute('content', THEMES[t].ink);   // iPhone 頂部狀態列顏色
+  renderThemePick();
+}
+function renderThemePick() {
+  const host = $('#themePick'); if (!host) return;
+  const cur = document.documentElement.dataset.theme;
+  host.replaceChildren(...Object.entries(THEMES).map(([k, v]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(k === cur));
+    const src = typeof avaSrc === 'function' ? avaSrc(v.char) : '';
+    b.innerHTML = `<span class="sw" style="background:${v.sw}">${
+      src ? `<img src="${esc(src)}" alt="" referrerpolicy="no-referrer">` : ''}</span><span>${v.name}</span>`;
+    b.querySelector('img')?.addEventListener('error', e => e.target.remove());
+    b.onclick = () => { applyTheme(k); toast('主題：' + v.name); };
+    return b;
+  }));
+}
 
 const ZOOMS = [0.8, 0.9, 1, 1.15, 1.3, 1.5];
 const curZoom = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom')) || 1;
@@ -2552,7 +2591,7 @@ $('#checkUpdate').onclick = async () => {
   finally { btn.disabled = false; btn.textContent = '檢查更新'; }
 };
 $('#aiKey').value = AI.key; $('#aiModel').value = AI.model; aiStatus();
-applyTheme(localStorage.getItem('ck.theme') || 'light');
+applyTheme(localStorage.getItem('ck.theme'));
 applyZoom(curZoom());
 
 (async () => {
