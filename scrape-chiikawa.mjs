@@ -515,7 +515,8 @@ async function main() {
     const re = terms.length
       ? new RegExp(terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g')
       : null;
-    const KANA = /[\u3040-\u309F\u30A0-\u30FF]/;
+    // 「・」(U+30FB) 中文都用（「袋・收納包」），唔當假名，唔係譯好嘅詞都會當未譯
+    const KANA = /[\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF]/;
     const RUN = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g;
     const miss = new Map(), sample = new Map();
 

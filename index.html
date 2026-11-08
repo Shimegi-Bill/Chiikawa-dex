@@ -328,6 +328,43 @@ tailwind.config = {
     background:var(--ink2);color:var(--dim);display:grid;place-items:center;font-size:.8rem;font-weight:700}
   .iconbtn:hover{border-color:var(--edgeHi);color:var(--paper)}
   .iconbtn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--sealInk)}
+
+  /* ── 搜尋格右邊個 × ── */
+  .qwrap{position:relative;flex:1;min-width:0}
+  .qwrap .field{padding-right:2rem;-webkit-appearance:none;appearance:none}
+  .qwrap .field::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+  .qclear{position:absolute;right:.3rem;top:50%;transform:translateY(-50%);
+    width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;
+    background:var(--ink3);color:var(--paper);font-size:.8rem;line-height:1}
+
+  /* ── 右下角浮動掣：快速剔、返回頂部 ── */
+  .fabs{position:fixed;right:1rem;z-index:40;display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;
+    bottom:calc(1rem + env(safe-area-inset-bottom,0px))}
+  .fab{display:flex;align-items:center;gap:.35rem;border-radius:99px;padding:.6rem .95rem;
+    font-size:.82rem;font-weight:700;background:var(--ink2);color:var(--paper);
+    border:1px solid var(--edge);box-shadow:0 .3rem 1rem var(--shadow);transition:.15s}
+  .fab.round{width:2.75rem;height:2.75rem;padding:0;justify-content:center;font-size:1.1rem}
+  .fab[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+  /* 快速剔模式：格仔面頭加一粒剔圈，一眼知道撳落去會點 */
+  body.quick .slot .shot::before{content:'';position:absolute;left:.4rem;bottom:.4rem;z-index:3;
+    width:1.5rem;height:1.5rem;border-radius:50%;border:2px solid #fff;background:rgba(0,0,0,.25);
+    box-shadow:0 .1rem .4rem var(--shadow)}
+  body.quick .slot[data-own="1"] .shot::before{content:'✓';background:var(--ok);color:#fff;
+    font-size:.8rem;font-weight:900;display:grid;place-items:center}
+  body.quick .slot .kujibadge{left:2.2rem}
+
+  /* ── 分頁掣上面嘅紅點（例如太耐冇備份） ── */
+  .tabbtn{position:relative}
+  .tabbtn .dot{position:absolute;top:.35rem;right:-.45rem;width:.45rem;height:.45rem;border-radius:50%;
+    background:var(--rose)}
+
+  /* 自己 display 咗嘅元素加 .hidden 都要收得埋（唔靠 Tailwind 載入先後） */
+  .qclear.hidden,.fab.hidden,.filtercount.hidden,.tabbtn .dot.hidden{display:none}
+
+  /* ── 載入中 ── */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{width:2rem;height:2rem;border-radius:50%;border:3px solid var(--ink3);border-top-color:var(--gold);
+    animation:spin .9s linear infinite;margin:0 auto}
 </style>
 </head>
 <body class="font-body">
@@ -357,7 +394,7 @@ tailwind.config = {
     <button class="tabbtn" role="tab" aria-selected="true" data-tab="dex">圖鑑</button>
     <button class="tabbtn" role="tab" aria-selected="false" data-tab="log">入手紀錄</button>
     <button class="tabbtn" role="tab" aria-selected="false" data-tab="stat">統計</button>
-    <button class="tabbtn" role="tab" aria-selected="false" data-tab="data">資料</button>
+    <button class="tabbtn" role="tab" aria-selected="false" data-tab="data">資料<span id="dataDot" class="dot hidden"></span></button>
   </nav>
 </header>
 
@@ -368,7 +405,11 @@ tailwind.config = {
 
   <!-- 第一行：搵嘢 ＋ 排序 ＋ 篩選開關 -->
   <div class="flex gap-2 items-center mb-3">
-    <input id="q" class="field flex-1 min-w-0" placeholder="搵名、角色、系列、地點…" autocomplete="off">
+    <div class="qwrap">
+      <input id="q" class="field" type="search" enterkeyhint="search"
+             placeholder="搵名、角色、系列…" autocomplete="off">
+      <button id="qClear" class="qclear hidden" type="button" aria-label="清走搜尋">✕</button>
+    </div>
     <div id="ddSort" class="dd shrink-0"></div>
     <button id="moreFilters" class="btn btn-ghost shrink-0 whitespace-nowrap" aria-expanded="false">
       篩選<span id="filterCount" class="filtercount hidden"></span>
@@ -405,6 +446,15 @@ tailwind.config = {
   <div id="sections" class="space-y-9"></div>
 
   <p id="empty" class="hidden text-center text-dim py-16 text-sm">冇符合條件嘅項目。撳「重設」睇返全部。</p>
+  <div id="loading" class="hidden text-center py-20 px-6">
+    <div class="spinner mb-4"></div>
+    <p class="text-dim text-sm">載入緊圖鑑…</p>
+  </div>
+  <div id="loadFail" class="hidden text-center py-16 px-6">
+    <p class="font-round font-bold text-lg mb-2">載入唔到圖鑑</p>
+    <p class="text-dim text-sm mb-4">可能冇網絡。檢查下網絡，再撳「重試」。你嘅收藏紀錄冇事。</p>
+    <button class="btn btn-gold" id="retryLoad">重試</button>
+  </div>
   <div id="blank" class="hidden text-center py-20 px-6">
     <p class="font-round font-bold text-lg mb-2">圖鑑仲係空</p>
     <p class="text-dim text-sm leading-relaxed max-w-[26rem] mx-auto">
@@ -433,7 +483,17 @@ tailwind.config = {
 <section id="tab-stat" class="pt-5 hidden space-y-8">
   <div>
     <h2 class="font-round font-bold text-lg mb-1">收藏概況</h2>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3" id="statCards"></div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3" id="statCards"></div>
+    <div class="flex gap-2 flex-wrap mt-3">
+      <button class="btn btn-ghost" id="wishShare">📋 想要清單（買嘢用）</button>
+    </div>
+  </div>
+  <div id="statMonthBox" class="hidden">
+    <div class="flex items-baseline justify-between mb-3">
+      <h3 class="font-round font-bold">每月花費</h3>
+      <span class="text-dim text-[.75rem]">按打卡日期・實付</span>
+    </div>
+    <div id="statMonth" class="space-y-2"></div>
   </div>
   <div>
     <div class="flex items-baseline justify-between mb-3">
@@ -466,19 +526,23 @@ tailwind.config = {
       <button class="btn btn-gold" id="syncNow">立即同步</button>
       <button class="btn btn-ghost" id="syncSave">儲存設定</button>
       <label class="flex items-center gap-2 text-[.78rem] text-dim ml-1">
-        <input type="checkbox" id="syncAuto" class="accent-gold"> 開頁自動同步
+        <input type="checkbox" id="syncAuto" class="accent-gold"> 自動同步
       </label>
     </div>
+    <p class="text-dim text-[.72rem] mt-2">剔咗「自動同步」：開 App、改完 20 秒、轉走 App 嗰陣都會自己同步。</p>
     <p class="text-dim text-[.72rem] mt-3" id="syncInfo"></p>
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
     <h3 class="font-round font-bold mb-1">備份收藏</h3>
-    <p class="text-dim text-[.78rem] mb-3">收藏狀態、打卡紀錄同你影嘅相全部存喺呢部機嘅瀏覽器入面。清 cache 就會冇，記得定期匯出。</p>
+    <p class="text-dim text-[.78rem] mb-3">收藏狀態、打卡紀錄同你影嘅相全部存喺呢部機嘅瀏覽器入面。清 cache 就會冇，記得定期匯出。
+      iPhone 撳「匯出」會出分享選單，揀「儲存到檔案」。</p>
     <div class="flex gap-2 flex-wrap">
       <button class="btn btn-gold" id="expCollection">匯出收藏 JSON</button>
       <button class="btn btn-ghost" id="impCollection">匯入收藏 JSON</button>
     </div>
+    <p class="text-[.75rem] mt-3" id="backupInfo"></p>
+    <p class="text-dim text-[.72rem] mt-1">匯入會同現有紀錄合併：同一件以較新嗰次為準，唔會蓋走新嘅紀錄。</p>
   </div>
 
   <div class="bg-ink2 border border-ink3 rounded-xl p-4">
@@ -506,6 +570,7 @@ tailwind.config = {
     <h3 class="font-round font-bold mb-1">儲存空間</h3>
     <div class="bar my-2"><span id="quotaBar" style="width:0%"></span></div>
     <p class="text-dim text-[.75rem]" id="quotaText"></p>
+    <p class="text-dim text-[.72rem] mt-2" id="quotaPhoto"></p>
     <p class="text-dim text-[.72rem] mt-2">影嘅相會自動縮到 640px、轉 JPEG 先存，慳位。</p>
   </div>
 
@@ -601,7 +666,8 @@ tailwind.config = {
 
   <div class="bg-ink2 border border-rose/40 rounded-xl p-4">
     <h3 class="font-round font-bold mb-1 text-rose">清空</h3>
-    <p class="text-dim text-[.78rem] mb-3">刪走所有收藏狀態同打卡紀錄，圖鑑本身唔會變。冇得返轉頭。</p>
+    <p class="text-dim text-[.78rem] mb-3">刪走所有收藏狀態、打卡紀錄同打卡相，圖鑑本身唔會變。冇得返轉頭。
+      開咗同步嘅話，下次同步會由 Google Sheet 攞返。</p>
     <button class="btn btn-ghost !border-rose/50 !text-rose" id="wipe">清空收藏紀錄</button>
   </div>
 
@@ -665,7 +731,15 @@ tailwind.config = {
         <input id="ePlace" class="field mt-1" placeholder="例：香港迪士尼、首爾、東京晴空塔"></label>
     </div>
     <div class="grid grid-cols-2 gap-3">
-      <label class="block"><span class="text-dim text-[.72rem]">定價（日圓）</span><input id="ePrice" type="number" class="field mt-1" placeholder="1650"></label>
+      <label class="block"><span class="text-dim text-[.72rem]">定價</span>
+        <div class="flex gap-1 mt-1">
+          <input id="ePrice" type="number" inputmode="decimal" class="field min-w-0" placeholder="170">
+          <select id="eCur" class="field !w-auto shrink-0 !px-1">
+            <option value="HKD">HK$</option><option value="JPY">¥ 日圓</option><option value="TWD">NT$</option>
+            <option value="MOP">MOP$</option><option value="CNY">¥ 人民幣</option><option value="KRW">₩</option>
+            <option value="USD">US$</option>
+          </select>
+        </div></label>
       <label class="block"><span class="text-dim text-[.72rem]">官網連結</span><input id="eUrl" class="field mt-1" placeholder="https://…"></label>
     </div>
     <label class="block"><span class="text-dim text-[.72rem]">參考相片網址</span>
@@ -692,7 +766,14 @@ tailwind.config = {
   </div>
 </dialog>
 
-<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden bg-gold text-ink font-bold text-sm px-4 py-2 rounded-lg shadow-lg"></div>
+<!-- 右下角：快速剔（淨係圖鑑分頁先出）、返回頂部 -->
+<div class="fabs" id="fabs">
+  <button class="fab round hidden" id="toTop" type="button" aria-label="返回頂部">↑</button>
+  <button class="fab" id="quickBtn" type="button" aria-pressed="false">✓ 快速剔</button>
+</div>
+
+<div id="toast" class="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 hidden bg-gold text-ink font-bold text-sm px-4 py-2 rounded-lg shadow-lg max-w-[calc(100vw-2rem)] text-center"
+     style="bottom:calc(7.5rem + env(safe-area-inset-bottom,0px))"></div>
 
 <script>
 /* ══════════════════════════════════════════════════════════
@@ -769,7 +850,9 @@ const I18N = {
   terms: 0,
 };
 
-const HAS_KANA = /[\u3040-\u309F\u30A0-\u30FF]/;          // 平假名／片假名
+/* 「・」(U+30FB) 雖然喺片假名區，但中文都用（「袋・收納包」），唔當假名 ——
+   唔係已經譯好嘅中文詞都會俾當成「未譯」。 */
+const HAS_KANA = /[\u3040-\u309F\u30A0-\u30FA\u30FC-\u30FF]/;   // 平假名／片假名（唔計「・」）
 const KANA_RUN = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]+/g;
 const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -903,9 +986,16 @@ function dropdown(host, { opts, value, prefix = '', onPick, highlight = false })
      region place release_date price type image image_remote url first_seen
    character 係逗號分隔嘅字串，例如 "吉伊卡哇, 小八"。
 ════════════════════════════════════════════════════════════ */
-const VERSION = 'v1.9.0（2026-09-24）';
+const VERSION = 'v2.0.0（2026-11-08）';   // 上載新版一定要改，手機先會自動更新
 const K_COL = 'ck.collection', K_CAT = 'ck.catalog', K_CUSTOM = 'ck.custom',
-      K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat';
+      K_UI = 'ck.ui', K_SYNC = 'ck.sync', K_AUTOCAT = 'ck.autocat', K_BACKUP = 'ck.backup';
+
+/* 今日日期（本地時間）。唔好用 toISOString() —— 嗰個係 UTC，
+   喺日本朝早 9 點前會變咗琴日。 */
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 
 const $  = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -923,6 +1013,11 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, m =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
 let CATALOG = [], OPTS = {}, TALLY = {};
+/* 用 id 搵件嘢：唔好成日 CATALOG.find（9000 件 × 每條紀錄，會頓）。
+   RAW 係 normalize 之前嘅原始資料，改 tag 時要喺佢上面改，唔係會甩咗
+   幣值、本機相等欄位。BASE_IDS＝官網圖鑑有嘅 id，CUSTOM_IDS＝自訂／改過嘅 id。 */
+let BYID = new Map(), RAW = new Map(), BASE_IDS = new Set(), CUSTOM_IDS = new Set();
+let LOADING = true, LOAD_FAIL = false;
 
 /* 成份圖鑑（近 9000 件、幾 MB）放記憶體，唔靠 localStorage ——
    localStorage 得 5MB，塞唔落就會靜靜雞掟 QuotaExceededError，
@@ -939,6 +1034,120 @@ if (UI.v !== UI_DEFAULTS.v) UI = Object.assign(UI, { v: 2, cols: 3, group: 'none
 UI.cols = Math.min(8, Math.max(3, +UI.cols || 3));
 let F = { q: '', char: '', main: '', sub: '', theme: '', region: '', set: '' };
 let editingId = null;
+
+/* ══ 打卡相：放 IndexedDB ═══════════════════════════════════
+   以前打卡相同收藏紀錄一齊塞喺 localStorage（得 5MB），大約幾十張就爆，
+   而且每撳一下都要成份連相重新寫一次，好慢。
+   而家相放 IndexedDB（可以放幾百 MB），localStorage 淨係放細嘢。
+   · 開 App 時舊相會自動搬過去：確認寫好咗先至喺 localStorage 刪走
+   · IndexedDB 用唔到（例如私密瀏覽）就照舊放 ck.collection，唔會壞
+   · 刪咗相會留個「-」記號（PH_DEL），同步時另一部機先知要刪，
+     唔係張相會由 Google Sheet 返嚟
+   同步、匯出、匯入都係用返舊格式（每件 ph 欄），兩邊版本撈埋用都得。 */
+const PH = new Map();        // id → data URL
+let PHDB = null;             // IDBDatabase；null ＝ 用唔到
+const PH_DEL = '-';
+const isPhoto = v => typeof v === 'string' && v.startsWith('data:');
+const photoOf = id => PH.get(id) || (isPhoto(COL[id]?.ph) ? COL[id].ph : '');
+
+function idbOpen() {
+  return new Promise(res => {
+    let done = false;
+    const fin = v => { if (!done) { done = true; res(v); } };
+    setTimeout(() => fin(null), 3000);        // iOS 間中 open 冇反應，唔好卡死成個 App
+    try {
+      const rq = indexedDB.open('chiikawa-dex', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('photos');
+      rq.onsuccess = () => fin(rq.result);
+      rq.onerror = () => fin(null);
+      rq.onblocked = () => fin(null);
+    } catch { fin(null); }
+  });
+}
+function idbTx(mode, fn) {
+  return new Promise((res, rej) => {
+    const tx = PHDB.transaction('photos', mode);
+    const out = fn(tx.objectStore('photos'));
+    tx.oncomplete = () => res(out?.result ?? out);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error || new Error('abort'));
+  });
+}
+async function idbAll() {
+  const m = new Map();
+  await idbTx('readonly', s => {
+    const rq = s.openCursor();
+    rq.onsuccess = () => { const c = rq.result; if (c) { m.set(String(c.key), c.value); c.continue(); } };
+  });
+  return m;
+}
+const idbPut = pairs => idbTx('readwrite', s => { for (const [k, v] of pairs) s.put(v, k); });
+const idbDel = ids => idbTx('readwrite', s => { for (const k of ids) s.delete(k); });
+
+async function initPhotos() {
+  if (!('indexedDB' in window)) return;
+  PHDB = await idbOpen();
+  if (!PHDB) return;
+  try {
+    for (const [k, v] of await idbAll()) PH.set(k, v);
+    const move = Object.entries(COL).filter(([, c]) => isPhoto(c?.ph));
+    if (!move.length) return;
+    await idbPut(move.map(([id, c]) => [id, c.ph]));
+    const back = await idbAll();              // 讀返出嚟對過，啱先刪舊嗰份
+    let n = 0;
+    for (const [id, c] of move) if (back.get(id) === c.ph) { PH.set(id, c.ph); delete c.ph; n++; }
+    if (n) write(K_COL, COL, true);
+  } catch {
+    PHDB = null; PH.clear();                  // 出錯就退返舊做法；未搬嘅相仲喺 ck.collection
+  }
+}
+
+function setPhoto(id, data) {
+  const c = touch(id);
+  if (!PHDB) { c.ph = data; return; }
+  PH.set(id, data); delete c.ph;
+  idbPut([[id, data]]).catch(() => {          // 寫唔到 IndexedDB：放返 localStorage
+    PH.delete(id); touch(id).ph = data; write(K_COL, COL);
+  });
+}
+function delPhoto(id) {
+  const c = touch(id);
+  c.ph = PH_DEL;
+  if (PH.delete(id) && PHDB) idbDel([id]).catch(() => {});
+}
+/* 連相一齊嘅收藏（同步、匯出用），格式同舊版一樣 */
+function fullCol() {
+  const out = {};
+  for (const [id, c] of Object.entries(COL)) {
+    out[id] = { ...c };
+    const p = PH.get(id); if (p) out[id].ph = p;
+  }
+  return out;
+}
+/* 將合併好嘅收藏寫返入嚟：相分返出去 IndexedDB。回傳有改過嘅 id。 */
+function applyCol(next) {
+  const changed = [], puts = [], dels = [];
+  const col = {};
+  for (const [id, rec] of Object.entries(next)) {
+    if (!rec || typeof rec !== 'object') continue;
+    const m = { ...rec };
+    const before = JSON.stringify([COL[id] || null, PH.get(id) || '']);
+    if (PHDB) {
+      if (isPhoto(m.ph)) { if (PH.get(id) !== m.ph) { PH.set(id, m.ph); puts.push([id, m.ph]); } delete m.ph; }
+      else if (m.ph === PH_DEL) { if (PH.delete(id)) dels.push(id); }
+      else delete m.ph;
+    }
+    col[id] = m;
+    if (JSON.stringify([m, PH.get(id) || '']) !== before) changed.push(id);
+  }
+  for (const id of Object.keys(COL)) if (!col[id]) { col[id] = COL[id]; }   // 唔會靜靜雞刪紀錄
+  COL = col;
+  if (PHDB) {
+    if (puts.length) idbPut(puts).catch(() => toast('有啲打卡相存唔到'));
+    if (dels.length) idbDel(dels).catch(() => {});
+  }
+  return changed;
+}
 
 /* ── 角色字串 → 陣列（逗號分隔，去空白）───────────────── */
 /* 角色字串得二十幾種，記住咗就唔使每次都拆 ——
@@ -985,7 +1194,7 @@ function normalize(x) {
      角色名、系列名、細類名官網一律冇翻譯，所以一定要譯。
      對照表喺 translations.json，改完 refresh 就生效，唔使重新爬。 */
   const raw = x.name || x.name_ja || '(未命名)';
-  return {
+  const it = {
     ...x,
     id: String(x.id),
     name: x.name_official ? raw : tr(raw),
@@ -999,21 +1208,42 @@ function normalize(x) {
     place: tr(x.place),
     release_date: x.release_date || '',
     price: +x.price || 0,
-    currency: x.currency || 'JPY',
+    // 冇幣值：舊版自訂加入嗰格寫「定價（日圓）」，所以有價錢就當日圓
+    currency: x.currency || (+x.price ? 'JPY' : ''),
     type: x.type || 'goods',
     image: x.image || '', image_remote: x.image_remote || '',
     url: x.url || '', first_seen: x.first_seen || '',
   };
+  // 搜尋用：每件嘢一條預先砌好嘅字串，唔使每打一隻字都重新砌 9000 次
+  it._hay = [it.name, it.name_ja, it.character, it.theme, it.main_category, it.sub_category,
+             it.region, it.place, it.kuji, it.prize, it.id].filter(Boolean).join(' ').toLowerCase();
+  return it;
 }
 
 function loadCatalog() {
   const base = MEM_CAT || read(K_CAT, null);
   const custom = read(K_CUSTOM, []);
   const over = new Map(custom.map(x => [String(x.id), x]));
-  const arr = (Array.isArray(base) && base.length ? base : BUILTIN)
-    .map(x => over.get(String(x.id)) ?? x);
+  const baseArr = Array.isArray(base) && base.length ? base : BUILTIN;
+  BASE_IDS = new Set(baseArr.map(x => String(x.id)));
+  CUSTOM_IDS = new Set(over.keys());
+  /* 改過 tag 嘅官網商品：舊版儲存時會甩咗幣值、本機相等欄位
+     （價錢會由 HK$ 變 ¥），所以用官網原本嗰份補返。 */
+  const FILL = ['currency', 'image', 'image_remote', 'shopify_id', 'price_raw', 'name_official', 'first_seen'];
+  const arr = baseArr.map(x => {
+    const o = over.get(String(x.id));
+    if (!o) return x;
+    const m = { ...x, ...o };
+    for (const k of FILL) if ((o[k] === undefined || o[k] === '') && x[k] !== undefined) m[k] = x[k];
+    // 自己換咗參考相網址就照用自己嗰張，唔好俾官網本機相蓋過
+    if (o.image_remote && o.image_remote !== x.image_remote && !o.image) m.image = '';
+    return m;
+  });
   const seen = new Set(arr.map(x => String(x.id)));
-  CATALOG = [...arr, ...custom.filter(x => !seen.has(String(x.id)))].map(normalize);
+  const rawAll = [...arr, ...custom.filter(x => !seen.has(String(x.id)))];
+  RAW = new Map(rawAll.map(x => [String(x.id), x]));
+  CATALOG = rawAll.map(normalize);
+  BYID = new Map(CATALOG.map(x => [x.id, x]));
   buildOptions();
   $('#catalogInfo').textContent =
     `現時 ${CATALOG.length} 件　·　${Array.isArray(base) && base.length ? '已載入官網資料' : '未有圖鑑資料'}` +
@@ -1436,8 +1666,8 @@ async function scanRun(file) {
     const id = b.dataset.pick;
     const c = touch(id);
     c.s = 1; if (!c.q) c.q = 1;
-    if ($('#scanKeep').checked) c.ph = scanPhoto;
-    write(K_COL, COL); refresh();
+    if ($('#scanKeep').checked) setPhoto(id, scanPhoto);
+    colChanged([id]);
     $('#scan').close(); toast('已標做入手');
     openDetail(id);
   });
@@ -1667,7 +1897,20 @@ const isNew = it => it.first_seen && (Date.now() - Date.parse(it.first_seen)) < 
 function touch(id) { const c = COL[id] || {}; c.u = Date.now(); COL[id] = c; return c; }
 function setState(id, s) {
   const c = touch(id); c.s = s; if (s && !c.q) c.q = 1;
-  write(K_COL, COL); refresh();
+  colChanged([id]);
+}
+
+/* 收藏改咗：存低、就地更新嗰幾格，唔好成個圖鑑重畫 ——
+   重畫會將已經捲落去載入嘅格仔清走，撳完返出嚟就唔喺原本位置。
+   開咗自動同步就排隊同步。 */
+function saveCol() {
+  const ok = write(K_COL, COL);
+  scheduleSync();
+  return ok;
+}
+function colChanged(ids) {
+  saveCol();
+  softRefresh(ids);
 }
 
 /* ── 多維度篩選 ───────────────────────────────────────────
@@ -1699,14 +1942,11 @@ const PREDS = {
       default: return true;
     }
   },
-  q: it => {
-    const q = F.q.trim().toLowerCase();
-    if (!q) return true;
-    return [it.name, it.name_ja, it.character, it.theme, it.main_category,
-            it.sub_category, it.region, it.place, it.kuji, it.prize]
-      .filter(Boolean).join(' ').toLowerCase().includes(q);
-  },
+  // 搜尋：用空格分開幾個字，全部都要中（例如「小八 吊飾」）；JAN 碼都搵到
+  q: it => !Q_TERMS.length || Q_TERMS.every(t => it._hay.includes(t)),
 };
+let Q_TERMS = [];
+const setQuery = q => { F.q = q; Q_TERMS = q.trim().toLowerCase().split(/\s+/).filter(Boolean); };
 const PRED_KEYS = Object.keys(PREDS);
 
 const filtered = () => CATALOG.filter(it => PRED_KEYS.every(k => PREDS[k](it)));
@@ -1833,12 +2073,26 @@ function groupsOf(list) {
 }
 
 /* ── 圖鑑格 ───────────────────────────────────────────── */
+/* 每件嘢畫咗邊幾格（按角色分段時一件可以出現喺幾段），
+   收藏改咗就淨係重畫呢幾格。 */
+let CARD_EL = new Map();
+
 function card(it) {
-  const s = st(it.id), q = qty(it.id), c = COL[it.id] || {};
+  const el = document.createElement('button');
+  el.dataset.id = it.id;
+  paintCard(el, it);
+  el.addEventListener('click', () => QUICK ? quickToggle(it.id) : openDetail(it.id));
+  if (!CARD_EL.has(it.id)) CARD_EL.set(it.id, new Set());
+  CARD_EL.get(it.id).add(el);
+  return el;
+}
+
+function paintCard(el, it) {
+  const s = st(it.id), q = qty(it.id), ph = photoOf(it.id);
   const cs = splitChars(it.character);
   const [c1, c2] = colorOf(cs[0]);
-  const src = c.ph || it.image || it.image_remote;
-  const el = document.createElement('button');
+  const src = ph || it.image || it.image_remote;
+  const c = { ph };
   el.className = 'slot' + (src ? '' : ' noimg');
   el.dataset.own = s;
   el.style.setProperty('--c1', c1);
@@ -1882,39 +2136,102 @@ function card(it) {
     if (alt) { img.removeAttribute('data-alt'); img.src = alt; return; }
     el.classList.add('noimg'); img.remove();
   });
-  el.addEventListener('click', () => openDetail(it.id));
-  return el;
 }
 
 /* ── 主畫面 ───────────────────────────────────────────── */
 const SEC_PAGE = 60;
-let io = null;
+let io = null, moreIO = null;
+
+/* 捲到「再顯示」掣附近就自動載下一批，唔使逐次撳（個掣照留住做後備） */
+function autoMore(sec) {
+  const btn = sec?.querySelector('.secmore');
+  if (!btn || btn.classList.contains('hidden') || sec.querySelector('.body').classList.contains('hidden')) return;
+  fillSection(sec);
+  requestAnimationFrame(() => {
+    const r = btn.getBoundingClientRect();
+    if (!btn.classList.contains('hidden') && r.bottom > 0 && r.top < innerHeight + 800) autoMore(sec);
+  });
+}
+
+let LAST_LIST = [];
 
 function refresh() {
   const list = filtered();
+  LAST_LIST = list;
   const host = $('#sections');
   host.replaceChildren();
+  CARD_EL = new Map();
   if (io) io.disconnect();
+  if (moreIO) moreIO.disconnect();
+  moreIO = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) autoMore(e.target.closest('section'));
+  }, { rootMargin: '0px 0px 800px 0px' });
   io = new IntersectionObserver(es => {
     for (const e of es) if (e.isIntersecting) { io.unobserve(e.target); fillSection(e.target); }
   }, { rootMargin: '500px 0px' });
   for (const g of groupsOf(list)) host.appendChild(sectionEl(g));
 
-  $('#empty').classList.toggle('hidden', list.length > 0 || !CATALOG.length);
-  $('#blank').classList.toggle('hidden', CATALOG.length > 0);
+  const empty = !CATALOG.length;
+  $('#empty').classList.toggle('hidden', list.length > 0 || empty);
+  $('#loading').classList.toggle('hidden', !(empty && LOADING));
+  $('#loadFail').classList.toggle('hidden', !(empty && !LOADING && LOAD_FAIL));
+  $('#blank').classList.toggle('hidden', !(empty && !LOADING && !LOAD_FAIL));
 
-  const own = list.filter(i => st(i.id) === 1).length;
-  $('#resultCount').textContent = list.length;
-  $('#resultOwned').textContent = list.length ? `已入手 ${own}` : '';
+  updateCounts();
+  renderControls();
+  markTabsDirty();
+}
 
+/* 頂部「已入手 / 總數」同篩選結果件數 */
+function updateCounts() {
+  const own = LAST_LIST.filter(i => st(i.id) === 1).length;
+  $('#resultCount').textContent = LAST_LIST.length;
+  $('#resultOwned').textContent = LAST_LIST.length ? `已入手 ${own}` : '';
   const all = CATALOG.length, allOwn = CATALOG.filter(i => st(i.id) === 1).length;
   $('#statOwned').textContent = allOwn;
   $('#statTotal').textContent = all;
   $('#statPct').textContent = all ? Math.round(allOwn / all * 100) + '%' : '0%';
+}
 
-
+/* 收藏改咗：淨係重畫有關嘅格仔（連同一套嘅其他格，因為「套 3/8」會變）、
+   每段標題嘅進度、頂部數字。格仔位置唔郁，捲到邊就喺邊。 */
+function softRefresh(ids) {
+  const touched = new Set();
+  for (const id of ids) {
+    touched.add(id);
+    const s = setOf(BYID.get(id) || {});
+    if (s) for (const x of s.items) touched.add(x.id);
+  }
+  for (const id of touched) {
+    const it = BYID.get(id);
+    for (const el of CARD_EL.get(id) || []) if (it && el.isConnected) paintCard(el, it);
+  }
+  for (const sec of $$('#sections > section')) {
+    const g = sec._g; if (!g || g.flat) continue;
+    g.own = g.items.filter(i => st(i.id) === 1).length;
+    const pct = g.items.length ? g.own / g.items.length * 100 : 0;
+    const bar = sec.querySelector('.sechead .bar > span'); if (bar) bar.style.width = pct.toFixed(1) + '%';
+    const t = sec.querySelector('.sechead .tally'); if (t) t.textContent = `${g.own}/${g.items.length}`;
+  }
+  updateCounts();
   renderControls();
-  renderLogs(); renderStats(); renderQuota();
+  markTabsDirty();
+}
+
+/* 入手紀錄、統計、資料三個分頁：見到先畫，唔使每撳一下都三個一齊重畫 */
+let CUR_TAB = 'dex';
+const DIRTY = { log: true, stat: true, data: true };
+function markTabsDirty() {
+  DIRTY.log = DIRTY.stat = DIRTY.data = true;
+  renderTab(CUR_TAB);
+  updateBackupDot();
+}
+function renderTab(t) {
+  if (t === 'dex' || !DIRTY[t]) return;
+  DIRTY[t] = false;
+  if (t === 'log') renderLogs();
+  else if (t === 'stat') renderStats();
+  else if (t === 'data') { renderQuota(); syncStatus(); renderBackupInfo(); }
 }
 
 function sectionEl(g) {
@@ -1934,6 +2251,7 @@ function sectionEl(g) {
       <div class="dexgrid" style="--cols:${UI.cols}"></div>
       <button class="secmore hidden btn btn-ghost w-full mt-3"></button>
     </div>`;
+  moreIO.observe(sec.querySelector('.secmore'));
   if (g.flat) { fillSection(sec); sec.querySelector('.secmore').onclick = () => fillSection(sec); return sec; }
   sec.querySelector('.sechead').onclick = () => {
     const now = !UI.closed[g.k];
@@ -1961,11 +2279,12 @@ function fillSection(sec) {
 
 /* ── 詳情 ─────────────────────────────────────────────── */
 function openDetail(id) {
-  const it = CATALOG.find(x => x.id === id); if (!it) return;
-  const c = COL[id] || {}, s = st(id), q = qty(id), logs = c.logs || [];
+  const it = BYID.get(id); if (!it) return;
+  const ph = photoOf(id);
+  const c = { ...(COL[id] || {}), ph }, s = st(id), q = qty(id), logs = c.logs || [];
   const cs = splitChars(it.character);
   const [c1, c2] = colorOf(cs[0]);
-  const src = c.ph || it.image || it.image_remote;
+  const src = ph || it.image || it.image_remote;
 
   $('#detailBody').innerHTML = `
     <div class="relative">
@@ -2028,7 +2347,7 @@ function openDetail(id) {
           </div>
           <div class="setrow">${s.items.map(x => {
             const [a1, a2] = colorOf(splitChars(x.character)[0]);
-            const sx = COL[x.id]?.ph || x.image || x.image_remote;
+            const sx = photoOf(x.id) || x.image || x.image_remote;
             const label = x.name.slice(baseName(x.name).length).replace(/[（()）]/g, '').trim() || x.name;
             return `<button data-go="${esc(x.id)}" data-own="${st(x.id)}" title="${esc(x.name)}">
               <span class="ava" style="--c1:${a1};--c2:${a2}"><b>${esc((splitChars(x.character)[0] || '？')[0])}</b>${
@@ -2046,7 +2365,7 @@ function openDetail(id) {
         ${c.ph ? `<button class="text-rose text-[.72rem] mb-3" id="rmPhoto">刪走呢張相</button>` : ''}
         <div class="grid grid-cols-2 gap-2">
           <label class="block"><span class="text-dim text-[.7rem]">日期</span>
-            <input id="lDate" type="date" class="field mt-1" value="${new Date().toISOString().slice(0, 10)}"></label>
+            <input id="lDate" type="date" class="field mt-1" value="${today()}"></label>
           <label class="block"><span class="text-dim text-[.7rem]">實付（${esc(curSym().trim() || CUR_CODE)}）</span>
             <input id="lPrice" type="number" class="field mt-1" placeholder="${it.price || ''}"></label>
           <label class="block col-span-2"><span class="text-dim text-[.7rem]">入手地點</span>
@@ -2060,7 +2379,7 @@ function openDetail(id) {
             <div><div class="font-bold">${esc(l.d || '')}${l.pl ? '　' + esc(l.pl) : ''}</div>
               ${l.no ? `<div class="text-dim text-[.72rem] mt-[2px]">${esc(l.no)}</div>` : ''}</div>
             <div class="text-right shrink-0">
-              ${l.pr ? `<div class="text-gold font-bold">HK$${Number(l.pr).toLocaleString('zh-HK')}</div>` : ''}
+              ${l.pr ? `<div class="text-gold font-bold">${cash(l.pr)}</div>` : ''}
               <button class="text-dim text-[.68rem] mt-1" data-dellog="${i}">刪除</button>
             </div>
           </li>`).join('')}</ul>` : ''}
@@ -2068,7 +2387,7 @@ function openDetail(id) {
 
       <div class="flex gap-2 pt-1">
         ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener" class="btn btn-ghost flex-1 text-center">官網頁面</a>` : ''}
-        <button class="btn btn-ghost" id="editThis">${isCustom(it.id) ? '編輯 / 刪除' : '改 tag'}</button>
+        <button class="btn btn-ghost" id="editThis">${isCustom(it.id) && !inBase(it.id) ? '編輯 / 刪除' : '改 tag'}</button>
       </div>
     </div>`;
 
@@ -2079,7 +2398,7 @@ function openDetail(id) {
   });
   $('#dClose').onclick = () => $('#detail').close();
   $$('#detailBody [data-set]').forEach(b => b.onclick = () => { setState(id, +b.dataset.set); openDetail(id); });
-  const bump = d => { const x = touch(id); x.q = Math.max(1, (x.q || 1) + d); write(K_COL, COL); refresh(); openDetail(id); };
+  const bump = d => { const x = touch(id); x.q = Math.max(1, (x.q || 1) + d); colChanged([id]); openDetail(id); };
   if ($('#qMinus')) $('#qMinus').onclick = () => bump(-1);
   if ($('#qPlus')) $('#qPlus').onclick = () => bump(1);
   $('#addLog').onclick = () => {
@@ -2087,17 +2406,22 @@ function openDetail(id) {
     x.logs = x.logs || [];
     x.logs.unshift({ d: $('#lDate').value, pl: $('#lPlace').value.trim(), pr: $('#lPrice').value, no: $('#lNote').value.trim() });
     if (!x.s) x.s = 1; if (!x.q) x.q = 1;
-    write(K_COL, COL); refresh(); openDetail(id); toast('打咗卡');
+    colChanged([id]); openDetail(id); toast('打咗卡');
   };
   $$('#detailBody [data-dellog]').forEach(b => b.onclick = () => {
-    touch(id).logs.splice(+b.dataset.dellog, 1); write(K_COL, COL); refresh(); openDetail(id);
+    const l = (COL[id]?.logs || [])[+b.dataset.dellog];
+    if (!confirm(`刪走呢條打卡紀錄？${l?.d ? '（' + l.d + '）' : ''}`)) return;
+    touch(id).logs.splice(+b.dataset.dellog, 1); colChanged([id]); openDetail(id);
   });
   $$('#detailBody .setrow img').forEach(im => im.addEventListener('error', () => im.remove()));
   $$('#detailBody [data-go]').forEach(b => b.onclick = () => openDetail(b.dataset.go));
   $('#shootPhoto').onclick = () => pickPhoto(id);
-  if ($('#rmPhoto')) $('#rmPhoto').onclick = () => { delete touch(id).ph; write(K_COL, COL); refresh(); openDetail(id); };
+  if ($('#rmPhoto')) $('#rmPhoto').onclick = () => {
+    if (!confirm('刪走呢張打卡相？')) return;
+    delPhoto(id); colChanged([id]); openDetail(id);
+  };
   $('#editThis').onclick = () => { $('#detail').close(); openEditor(it); };
-  $('#detail').showModal();
+  if (!$('#detail').open) $('#detail').showModal();
 }
 
 /* ── 打卡相：縮細再存 ─────────────────────────────────── */
@@ -2113,12 +2437,14 @@ $('#photoPick').addEventListener('change', e => {
       const cv = document.createElement('canvas');
       cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
       cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-      const c = touch(photoTarget);
-      c.ph = cv.toDataURL('image/jpeg', 0.7);
+      const id = photoTarget;
+      setPhoto(id, cv.toDataURL('image/jpeg', 0.7));
+      const c = touch(id);
       if (!c.s) { c.s = 1; c.q = 1; }
-      if (write(K_COL, COL)) { refresh(); openDetail(photoTarget); toast('相已儲存'); }
+      if (saveCol()) { softRefresh([id]); openDetail(id); toast('相已儲存'); }
       photoTarget = null;
     };
+    img.onerror = () => toast('讀唔到呢張相');
     img.src = r.result;
   };
   r.readAsDataURL(f);
@@ -2129,8 +2455,9 @@ $('#photoPick').addEventListener('change', e => {
 function renderLogs() {
   const rows = [];
   for (const [id, c] of Object.entries(COL)) {
-    const it = CATALOG.find(x => x.id === id); if (!it) continue;
-    for (const l of (c.logs || [])) rows.push({ it, l, ph: c.ph });
+    const it = BYID.get(id); if (!it) continue;
+    const ph = photoOf(id);
+    for (const l of (c.logs || [])) rows.push({ it, l, ph });
   }
   rows.sort((a, b) => (b.l.d || '').localeCompare(a.l.d || ''));
   $('#logCount').textContent = rows.length
@@ -2151,7 +2478,7 @@ function renderLogs() {
         <div class="text-dim text-[.72rem] mt-[2px]">${esc(l.d || '')}${l.pl ? '　·　' + esc(l.pl) : ''}</div>
         ${l.no ? `<div class="text-dim text-[.7rem] mt-[2px] truncate">${esc(l.no)}</div>` : ''}
       </div>
-      ${l.pr ? `<div class="text-gold font-bold text-[.82rem] shrink-0">HK$${Number(l.pr).toLocaleString('zh-HK')}</div>` : ''}`;
+      ${l.pr ? `<div class="text-gold font-bold text-[.82rem] shrink-0">${cash(l.pr)}</div>` : ''}`;
     d.onclick = () => openDetail(it.id);
     return d;
   }));
@@ -2161,15 +2488,41 @@ function renderLogs() {
 function renderStats() {
   const all = CATALOG.length;
   const own = CATALOG.filter(i => st(i.id) === 1);
-  const want = CATALOG.filter(i => st(i.id) === 2).length;
-  const spent = Object.values(COL).flatMap(c => c.logs || []).reduce((s, l) => s + (+l.pr || 0), 0);
+  const wantList = CATALOG.filter(i => st(i.id) === 2);
+  const want = wantList.length;
+  const allLogs = Object.values(COL).flatMap(c => c.logs || []);
+  const spent = allLogs.reduce((s, l) => s + (+l.pr || 0), 0);
+  // 想要清單總值：淨計同圖鑑主要幣值一樣、有價錢嗰啲
+  const wantSum = wantList.filter(i => i.price && i.currency === CUR_CODE).reduce((s, i) => s + i.price, 0);
+  const extra = own.reduce((s, i) => s + Math.max(0, qty(i.id) - 1), 0);
   const box = (label, val, cls = '') => `
     <div class="bg-ink2 border border-ink3 rounded-xl p-3">
       <div class="font-round font-black text-[1.4rem] ${cls}">${val}</div>
       <div class="text-dim text-[.7rem] mt-1">${label}</div></div>`;
   $('#statCards').innerHTML =
     box('已入手', own.length, 'text-gold') + box('未入手', all - own.length - want) +
-    box('想要', want, 'text-rose') + box('累積花費', cash(spent), 'text-mint');
+    box('想要', want, 'text-rose') + box('累積花費', cash(spent), 'text-mint') +
+    box('想要清單總值', cash(wantSum), 'text-rose') + box('重複（可以換／送）', extra + ' 隻');
+  $('#wishShare').disabled = !want;
+  $('#wishShare').style.opacity = want ? 1 : .45;
+
+  // 每月花費：最近 12 個有打卡嘅月份
+  const mon = new Map();
+  for (const l of allLogs) {
+    const m = (l.d || '').slice(0, 7); if (!m) continue;
+    const r = mon.get(m) || { m, sum: 0, n: 0 };
+    r.sum += +l.pr || 0; r.n++; mon.set(m, r);
+  }
+  const months = [...mon.values()].sort((a, b) => b.m.localeCompare(a.m)).slice(0, 12);
+  const top = Math.max(1, ...months.map(r => r.sum));
+  $('#statMonthBox').classList.toggle('hidden', !months.length);
+  $('#statMonth').innerHTML = months.map(r => `
+    <div class="flex items-center gap-3">
+      <span class="text-[.78rem] w-20 shrink-0">${esc(r.m.replace('-', ' 年 '))} 月</span>
+      <div class="bar flex-1"><span style="width:${(r.sum / top * 100).toFixed(1)}%"></span></div>
+      <span class="text-[.72rem] w-28 text-right shrink-0"><b class="text-gold">${cash(r.sum)}</b>
+        <span class="text-dim">· ${r.n} 次</span></span>
+    </div>`).join('');
 
   const grp = (host, keysOf) => {
     // 同樣一次過數晒：掃一次圖鑑，順手記低每個值嘅總數同已入手數
@@ -2215,16 +2568,30 @@ function renderStats() {
 
 function renderQuota() {
   let bytes = 0;
-  for (const k in localStorage) if (Object.hasOwn(localStorage, k)) bytes += (localStorage[k] || '').length * 2;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      bytes += (k.length + (localStorage.getItem(k) || '').length) * 2;
+    }
+  } catch { /* 讀唔到就當 0 */ }
   const mb = bytes / 1048576, pct = Math.min(100, mb / 5 * 100);
   $('#quotaBar').style.width = pct + '%';
   $('#quotaBar').style.background = pct > 85 ? 'var(--rose)' : 'var(--gold)';
-  $('#quotaText').textContent = `用咗約 ${mb.toFixed(2)} MB / 5 MB　·　${Object.values(COL).filter(c => c.ph).length} 張打卡相`;
+  const inLS = Object.values(COL).filter(c => isPhoto(c.ph)).length;
+  $('#quotaText').textContent = `瀏覽器細資料：用咗約 ${mb.toFixed(2)} MB / 5 MB`;
+  $('#quotaPhoto').textContent = PHDB
+    ? `打卡相 ${PH.size + inLS} 張，放喺 IndexedDB，唔佔上面嗰 5MB。`
+    : `打卡相 ${inLS} 張，同上面一齊放（呢部機用唔到 IndexedDB，例如私密瀏覽），塞滿就要刪相。`;
+  if (PHDB && navigator.storage?.estimate) navigator.storage.estimate().then(e => {
+    if (e?.usage) $('#quotaPhoto').textContent += `　成個 App 用咗約 ${(e.usage / 1048576).toFixed(1)} MB。`;
+  }).catch(() => {});
 }
 
 /* ── 自訂加入 / 改 tag / 刪除 ─────────────────────────── */
-const isCustom = id => !!id && read(K_CUSTOM, []).some(x => String(x.id) === String(id));
-const inBase = id => (read(K_CAT, []) || []).some(x => String(x.id) === String(id));
+const isCustom = id => !!id && CUSTOM_IDS.has(String(id));
+// 官網圖鑑有冇呢件（以前讀 localStorage 嗰份，但圖鑑太大存唔入，永遠搵唔到 ——
+// 結果改過 tag 嘅官網商品撳「刪除」會連收藏紀錄一齊刪走）
+const inBase = id => !!id && BASE_IDS.has(String(id));
 
 function openEditor(it) {
   editingId = it?.id || null;
@@ -2240,6 +2607,7 @@ function openEditor(it) {
   $('#eRg').value = it?.region || '香港';
   $('#ePlace').value = it?.place || '';
   $('#ePrice').value = it?.price || ''; $('#eUrl').value = it?.url || '';
+  $('#eCur').value = (it?.price && it?.currency) || CUR_CODE || 'HKD';
   $('#eImg').value = it?.image_remote || it?.image || '';
   $('#editorDelete').classList.toggle('hidden', !isCustom(it?.id));
   $('#editorDelete').textContent = inBase(it?.id) ? '還原官網資料' : '刪除';
@@ -2258,7 +2626,11 @@ $('#editorCancel').onclick = () => $('#editor').close();
 $('#editorSave').onclick = () => {
   const name = $('#eName').value.trim();
   if (!name) { $('#eName').focus(); return; }
+  // 改 tag：喺原始資料上面改，唔好甩咗幣值、本機相、Shopify id 呢啲冇喺表格入面嘅欄位
+  const prev = editingId ? (RAW.get(String(editingId)) || {}) : {};
+  const imgUrl = $('#eImg').value.trim();
   const item = {
+    ...prev,
     id: editingId || 'u-' + Date.now().toString(36),
     name, name_ja: $('#eJa').value.trim(),
     character: splitChars($('#eChar').value).join(', '),
@@ -2269,20 +2641,26 @@ $('#editorSave').onclick = () => {
     place: $('#ePlace').value.trim(),
     release_date: $('#eDate').value,
     price: +$('#ePrice').value || 0,
+    currency: $('#eCur').value,
     type: $('#eType').dataset.v === 'k' ? 'kuji' : 'goods',
     kuji: $('#eKuji').value.trim(), prize: $('#ePrize').value.trim(),
-    image: '', image_remote: $('#eImg').value.trim(),
+    // 參考相冇改就保留本機相（img/），改咗先用新網址
+    image: imgUrl && imgUrl === (prev.image_remote || prev.image) ? (prev.image || '') : '',
+    image_remote: imgUrl,
     url: $('#eUrl').value.trim(),
-    first_seen: CATALOG.find(x => x.id === editingId)?.first_seen || '',
+    first_seen: BYID.get(editingId)?.first_seen || prev.first_seen || '',
   };
+  // 改咗名就唔再當官方繁中名（會用字典譯）；冇改就照舊
+  if (prev.name_official && name !== (BYID.get(editingId)?.name)) item.name_official = false;
   const custom = read(K_CUSTOM, []);
   const i = custom.findIndex(x => String(x.id) === String(item.id));
   if (i >= 0) custom[i] = item; else custom.push(item);
   write(K_CUSTOM, custom);
   loadCatalog();
   if (pendingNew !== null && !editingId) {     // 由「影相認嘢 → 開新一件」入嚟
-    const c = touch(item.id); c.s = 1; c.q = 1; c.ph = pendingNew;
-    write(K_COL, COL); pendingNew = null;
+    const c = touch(item.id); c.s = 1; c.q = 1;
+    if (pendingNew) setPhoto(item.id, pendingNew);
+    saveCol(); pendingNew = null;
   }
   refresh();
   $('#editor').close(); toast(editingId ? '改好咗' : '已加入圖鑑');
@@ -2296,18 +2674,32 @@ $('#editorDelete').onclick = () => {
     ? `還原「${it?.name}」做官網原本嘅資料？你改過嘅 tag 會冇咗。`
     : `刪走「${it?.name}」？連埋佢嘅收藏狀態同打卡紀錄一齊冇。`)) return;
   write(K_CUSTOM, read(K_CUSTOM, []).filter(x => String(x.id) !== String(editingId)));
-  if (!base) { delete COL[editingId]; write(K_COL, COL); }
+  if (!base) {
+    delete COL[editingId]; saveCol();
+    if (PH.delete(editingId) && PHDB) idbDel([editingId]).catch(() => {});
+  }
   loadCatalog(); refresh();
   $('#editor').close(); toast(base ? '還原咗' : '刪咗'); editingId = null;
 };
 
 /* ── 匯入匯出 ─────────────────────────────────────────── */
-function download(name, obj) {
-  const b = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+/* 匯出檔案。手機（iPhone／Android）先試分享選單 ——「儲存到檔案」，
+   主畫面 App 用 <a download> 唔一定得。撳取消唔當匯出咗。
+   檔名一定要英文，中文檔名有啲瀏覽器會變「download」。 */
+const isTouch = () => matchMedia('(pointer:coarse)').matches;
+async function saveFile(name, obj, title) {
+  const file = new File([JSON.stringify(obj, null, 2)], name, { type: 'application/json' });
+  if (isTouch() && navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: title || name }); return true; }
+    catch (e) { if (e.name === 'AbortError') return false; }   // 其他錯就試下載
+  }
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(b); a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return true;
 }
+const download = (name, obj) => saveFile(name, obj);
 let pickMode = null;
 function pickFile(mode) { pickMode = mode; $('#filePick').click(); }
 $('#filePick').addEventListener('change', e => {
@@ -2315,8 +2707,14 @@ $('#filePick').addEventListener('change', e => {
   f.text().then(t => {
     let data; try { data = JSON.parse(t) } catch { return toast('讀唔到，唔係有效嘅 JSON') }
     if (pickMode === 'collection') {
-      if (typeof data !== 'object' || Array.isArray(data)) return toast('呢個唔似係收藏檔');
-      COL = Object.assign(COL, data); write(K_COL, COL); toast('收藏已匯入（同現有嘅合併）');
+      if (!data || typeof data !== 'object' || Array.isArray(data)) return toast('呢個唔似係收藏檔');
+      /* 以前係直接蓋落去：匯入一份舊備份會將之後先改嘅紀錄變返舊。
+         而家同同步一樣逐件比較時間，較新嗰次贏，相亦會保留。 */
+      const before = new Set(Object.keys(COL));
+      const changed = applyCol(mergeCol(fullCol(), data));
+      saveCol();
+      const added = changed.filter(id => !before.has(id)).length;
+      toast(`收藏已匯入：新增 ${added} 件、更新 ${changed.length - added} 件`);
     } else {
       const arr = Array.isArray(data) ? data : data.items;
       if (!Array.isArray(arr) || !arr.length) return toast('呢個唔似係圖鑑檔');
@@ -2331,6 +2729,19 @@ $('#filePick').addEventListener('change', e => {
 /* ── 同步 ─────────────────────────────────────────────── */
 const PH_MAX = 45000;
 let SY = Object.assign({ url: '', key: '', auto: false, last: 0 }, read(K_SYNC, {}));
+let syncing = false, syncAgain = false, syncT = null;
+
+/* 自動同步：改完等 20 秒（連續撳幾件就一次過同步），轉走 App 嗰陣即刻做 */
+function scheduleSync(delay = 20000) {
+  if (!SY.auto || !SY.url) return;
+  clearTimeout(syncT);
+  syncT = setTimeout(() => { syncT = null; doSync(true); }, delay);
+}
+function flushSync() {
+  if (!syncT) return null;
+  clearTimeout(syncT); syncT = null;
+  return doSync(true);
+}
 
 async function syncCall(action, data, names) {
   if (!SY.url) throw new Error('未填 Apps Script 網址');
@@ -2363,25 +2774,36 @@ const stripBig = col => Object.fromEntries(Object.entries(col).map(([id, c]) => 
 }));
 
 async function doSync(silent) {
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
   try {
     $('#syncDot').textContent = '同步緊…';
     const { data: remote } = await syncCall('pull');
-    const merged = mergeCol(COL, remote || {});
-    await syncCall('push', stripBig(merged), Object.fromEntries(CATALOG.map(i => [i.id, i.name])));
-    COL = merged; write(K_COL, COL);
+    const merged = mergeCol(fullCol(), remote || {});
+    // 「收藏一覽」淨係要有紀錄嗰幾件嘅名，唔使次次傳晒 9000 個名
+    const names = Object.fromEntries(Object.keys(merged).map(id => [id, BYID.get(id)?.name || id]));
+    await syncCall('push', stripBig(merged), names);
+    // pull 同 push 之間你可能又撳咗嘢：同而家手上嗰份再合併一次，唔會蓋走
+    const changed = applyCol(mergeCol(fullCol(), merged));
+    write(K_COL, COL);
     SY.last = Date.now(); write(K_SYNC, SY);
-    refresh(); syncStatus();
-    if (!silent) toast('同步好咗');
+    if (changed.length > 300) refresh(); else if (changed.length) softRefresh(changed);
+    syncStatus();
+    if (!silent) toast(changed.length ? `同步好咗（另一部機改咗 ${changed.length} 件）` : '同步好咗');
   } catch (e) {
     $('#syncDot').textContent = '同步失敗';
     if (!silent) toast('同步失敗：' + e.message);
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; scheduleSync(3000); }
   }
 }
 function syncStatus() {
   $('#syncDot').textContent = !SY.url ? '未設定'
     : SY.last ? '上次 ' + new Date(SY.last).toLocaleString('zh-HK', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     : '已設定';
-  const big = Object.values(COL).filter(c => c.ph && c.ph.length > PH_MAX).length;
+  const big = [...PH.values()].filter(p => p.length > PH_MAX).length
+            + Object.values(COL).filter(c => isPhoto(c.ph) && c.ph.length > PH_MAX).length;
   $('#syncInfo').textContent = big
     ? `有 ${big} 張打卡相太大，過唔到 Sheet（其他嘢照樣同步）。要過機就用匯出 JSON。`
     : '收藏狀態、數量、打卡紀錄同細張相都會同步。';
@@ -2397,27 +2819,41 @@ $('#syncNow').onclick = () => {
 
 /* ── 自動載入 catalog.json ＋ manual.json ────────────────── */
 let autoCat = read(K_AUTOCAT, true);
-async function grab(name) {
+async function grabText(name) {
   try {
     const r = await fetch(name, { cache: 'no-cache' });
-    if (!r.ok) return [];
-    const j = await r.json();
-    return Array.isArray(j) ? j : [];
-  } catch { return []; }
+    return r.ok ? await r.text() : '';
+  } catch { return ''; }
+}
+const parseArr = t => { try { const j = JSON.parse(t); return Array.isArray(j) ? j : []; } catch { return []; } };
+/* 內容指紋：價錢、譯名、相有任何改動都會變。
+   以前淨係比件數同頭尾兩件，件數一樣但內容改咗就唔會更新。 */
+function textSig(s) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return s.length + ':' + (h >>> 0).toString(36);
 }
 async function fetchCatalog() {
-  if (!autoCat) return;
-  const [auto, manual] = await Promise.all([grab('catalog.json'), grab('manual.json')]);
+  const have = MEM_CAT || read(K_CAT, null);
+  const hasOld = Array.isArray(have) && have.length;
+  // 冇剔「每次開頁檢查」都好，手上冇圖鑑（太大存唔入瀏覽器）就一定要載，唔係得個吉
+  if (!autoCat && hasOld) { LOADING = false; return; }
+  LOADING = true; LOAD_FAIL = false;
+  const [autoTxt, manTxt] = await Promise.all([grabText('catalog.json'), grabText('manual.json')]);
+  LOADING = false;
+  const auto = parseArr(autoTxt), manual = parseArr(manTxt);
   const seen = new Set(auto.map(x => String(x.id)));
   const arr = [...auto, ...manual.filter(x => !seen.has(String(x.id)))];
-  if (!arr.length) return;
-  const cur = MEM_CAT || read(K_CAT, null);
-  const same = Array.isArray(cur) && cur.length === arr.length &&
-    String(cur[0]?.id) === String(arr[0]?.id) && String(cur.at(-1)?.id) === String(arr.at(-1)?.id);
-  if (same) return;
-  const before = cur?.length || 0;
+  if (!arr.length) { LOAD_FAIL = !hasOld; refresh(); return; }
+  const sig = textSig(autoTxt + '\n' + manTxt);
+  if (hasOld && sig === read('ck.catsig', '')) { refresh(); return; }
   setCatalog(arr);
-  toast(before ? `圖鑑更新咗：${before} → ${arr.length} 件` : `載入咗 ${arr.length} 件`);
+  if (CAT_PERSISTED) write('ck.catsig', sig, true); else localStorage.removeItem('ck.catsig');
+  // 同上次開 App 比較件數：有變先講，唔使次次都彈「載入咗 9000 件」
+  const before = read('ck.catcount', 0);
+  write('ck.catcount', arr.length, true);
+  if (!before) toast(`載入咗 ${arr.length} 件`);
+  else if (before !== arr.length) toast(`圖鑑更新咗：${before} → ${arr.length} 件`);
 }
 
 /* 記憶體行先，順便試下塞唔塞得入 localStorage 做離線後備。
@@ -2429,6 +2865,7 @@ function setCatalog(arr) {
   loadCatalog(); refresh();
 }
 $('#autoCat').onchange = e => { autoCat = e.target.checked; write(K_AUTOCAT, autoCat); if (autoCat) fetchCatalog(); };
+$('#retryLoad').onclick = () => { LOADING = true; LOAD_FAIL = false; refresh(); fetchCatalog(); };
 
 /* ── 未翻譯詞彙 ───────────────────────────────────────── */
 function renderMissing() {
@@ -2518,8 +2955,16 @@ function toast(msg) {
 /* ── 接駁 ─────────────────────────────────────────────── */
 let qT;
 $('#q').addEventListener('input', e => {
-  F.q = e.target.value; clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
+  setQuery(e.target.value);
+  $('#qClear').classList.toggle('hidden', !e.target.value);
+  clearTimeout(qT); qT = setTimeout(() => refresh(), 160);
 });
+// 撳鍵盤「搜尋」收埋鍵盤，睇到結果
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+$('#qClear').onclick = () => {
+  $('#q').value = ''; setQuery(''); $('#qClear').classList.add('hidden');
+  clearTimeout(qT); refresh(); $('#q').focus();
+};
 $('#moreFilters').onclick = () => {
   const panel = $('#filterPanel');
   const open = panel.classList.toggle('hidden');
@@ -2534,15 +2979,24 @@ $('#foldAll').onclick = () => {
 };
 $('#clearFilters').onclick = () => {
   F = { q: '', char: '', main: '', sub: '', theme: '', region: '', set: '' };
+  setQuery('');
   UI.view = 'all'; UI.closed = {}; write(K_UI, UI);
-  $('#q').value = ''; $('#foldAll').textContent = '全部摺埋';
+  $('#q').value = ''; $('#qClear').classList.add('hidden'); $('#foldAll').textContent = '全部摺埋';
   refresh();
 };
 $('#addItem').onclick = () => openEditor(null);
 $('#blankAdd').onclick = () => openEditor(null);
-$('#expCollection').onclick = () => download(`chiikawa-collection-${new Date().toISOString().slice(0, 10)}.json`, COL);
+$('#expCollection').onclick = async () => {
+  const col = fullCol();
+  if (!Object.keys(col).length) return toast('仲未有收藏紀錄');
+  if (await saveFile(`chiikawa-collection-${today()}.json`, col, '吉伊圖鑑 收藏備份')) {
+    write(K_BACKUP, Date.now());
+    renderBackupInfo(); updateBackupDot();
+    toast('匯出咗，記得收好個檔');
+  }
+};
 $('#impCollection').onclick = () => pickFile('collection');
-$('#expCatalog').onclick = () => download('catalog.json', CATALOG);
+$('#expCatalog').onclick = () => download('catalog.json', CATALOG.map(({ _hay, set_key, ...x }) => x));
 $('#impCatalog').onclick = () => pickFile('catalog');
 $('#expManual').onclick = () => {
   const mine = read(K_CUSTOM, []);
@@ -2552,54 +3006,164 @@ $('#expManual').onclick = () => {
 $('#resetCatalog').onclick = () => {
   if (!confirm('清走已載入嘅官網資料？收藏紀錄照樣保留，下次開頁會重新載入。')) return;
   MEM_CAT = null; CAT_PERSISTED = true;
-  localStorage.removeItem(K_CAT); loadCatalog(); refresh(); toast('清咗');
+  localStorage.removeItem(K_CAT); localStorage.removeItem('ck.catsig');
+  loadCatalog(); refresh(); toast('清咗');
 };
 $('#wipe').onclick = () => {
-  if (!confirm('刪走全部收藏狀態同打卡紀錄？冇得返轉頭。')) return;
-  COL = {}; localStorage.removeItem(K_COL); refresh(); toast('已清空');
+  if (!confirm('刪走全部收藏狀態、打卡紀錄同打卡相？冇得返轉頭。\n（建議先撳「匯出收藏 JSON」備份）')) return;
+  clearTimeout(syncT); syncT = null;
+  COL = {}; localStorage.removeItem(K_COL);
+  PH.clear(); if (PHDB) idbTx('readwrite', s => s.clear()).catch(() => {});
+  refresh(); toast('已清空');
 };
+
+/* ── 分頁：記住每頁捲到邊；再撳同一頁＝返頂 ─────────────── */
+const TAB_Y = {};
 $$('.tabbtn').forEach(b => b.onclick = () => {
+  const t = b.dataset.tab;
+  if (t === CUR_TAB) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  TAB_Y[CUR_TAB] = scrollY;
+  CUR_TAB = t;
   $$('.tabbtn').forEach(x => x.setAttribute('aria-selected', x === b));
-  ['dex', 'log', 'stat', 'data'].forEach(t => $('#tab-' + t).classList.toggle('hidden', t !== b.dataset.tab));
-  window.scrollTo({ top: 0 });
+  ['dex', 'log', 'stat', 'data'].forEach(k => $('#tab-' + k).classList.toggle('hidden', k !== t));
+  renderTab(t);
+  $('#quickBtn').classList.toggle('hidden', t !== 'dex');
+  window.scrollTo({ top: TAB_Y[t] || 0 });
+  onScroll();
 });
 $('#detail').addEventListener('click', e => { if (e.target.id === 'detail') $('#detail').close(); });
+
+/* ── 返回頂部 ─────────────────────────────────────────── */
+function onScroll() { $('#toTop').classList.toggle('hidden', scrollY < innerHeight * 1.5); }
+addEventListener('scroll', onScroll, { passive: true });
+$('#toTop').onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+/* ── 快速剔：撳格仔＝已入手，再撳＝取消，唔使逐件打開 ──────── */
+let QUICK = false;
+function setQuick(on) {
+  QUICK = on;
+  document.body.classList.toggle('quick', on);
+  $('#quickBtn').setAttribute('aria-pressed', String(on));
+  $('#quickBtn').textContent = on ? '✓ 完成快速剔' : '✓ 快速剔';
+}
+function quickToggle(id) {
+  const it = BYID.get(id); if (!it) return;
+  const on = st(id) !== 1;
+  setState(id, on ? 1 : 0);
+  toast((on ? '✓ 已入手：' : '取消入手：') + it.name);
+}
+$('#quickBtn').onclick = () => {
+  setQuick(!QUICK);
+  if (QUICK) toast('撳格仔＝已入手，再撳＝取消');
+};
+
+/* ── 想要清單：出街買嘢時睇／傳俾人 ───────────────────── */
+$('#wishShare').onclick = async () => {
+  const list = CATALOG.filter(i => st(i.id) === 2)
+    .sort((a, b) => cmpStr(b.release_date, a.release_date));
+  if (!list.length) return toast('仲未有想要嘅嘢');
+  const text = `吉伊卡哇 想要清單（${list.length} 件）\n` +
+    list.map((i, n) => `${n + 1}. ${i.name}${i.price ? '　' + money(i) : ''}`).join('\n');
+  if (isTouch() && navigator.share) {
+    try { await navigator.share({ text }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(text); toast(`複製咗 ${list.length} 件，可以貼去備忘錄`); }
+  catch { prompt('複製呢段：', text); }
+};
+
+/* ── 備份提醒：有收藏但超過 30 日冇匯出，「資料」分頁出紅點 ── */
+const BACKUP_DAYS = 30;
+const hasCollection = () => Object.values(COL).some(c => c && (c.s || (c.logs || []).length));
+const backupAge = () => { const t = read(K_BACKUP, 0); return t ? Math.floor((Date.now() - t) / 864e5) : null; };
+function updateBackupDot() {
+  const a = backupAge();
+  $('#dataDot').classList.toggle('hidden', !(hasCollection() && (a === null || a >= BACKUP_DAYS)));
+}
+function renderBackupInfo() {
+  const el = $('#backupInfo'), t = read(K_BACKUP, 0), a = backupAge();
+  if (!hasCollection()) { el.textContent = ''; return; }
+  el.textContent = !t ? '⚠ 未匯出過備份，建議而家匯出一次。'
+    : `上次匯出：${new Date(t).toLocaleDateString('zh-HK')}（${a ? a + ' 日前' : '今日'}）`
+      + (a >= BACKUP_DAYS ? '　⚠ 超過一個月，建議再匯出' : '');
+  el.style.color = (!t || a >= BACKUP_DAYS) ? 'var(--rose)' : 'var(--dim)';
+}
 
 /* ── 開機 ─────────────────────────────────────────────── */
 $('#syncUrl').value = SY.url; $('#syncKey').value = SY.key; $('#syncAuto').checked = SY.auto;
 $('#autoCat').checked = autoCat;
 $('#verText').textContent = VERSION;
 
-/* 加咗去主畫面之後冇網址列、冇重新整理掣，iOS 會一直用住舊版；
+/* ── 自動更新 ─────────────────────────────────────────────
+   加咗去主畫面之後冇網址列、冇重新整理掣，iOS 會一直用住舊版；
    GitHub Pages 本身又有 10 分鐘 CDN cache。
-   做法：去攞一次最新嘅 index.html（加時間戳避開 cache），
-   比較版本號，唔同就帶住時間戳重新載入。 */
+   做法：開 App 同返到前景時去攞一次最新嘅 index.html（加時間戳避開 cache），
+   比較版本號，唔同就帶住新版本號重新載入。
+   · 打開緊詳細頁／編輯器就唔好 reload，等下次先
+   · 同一個新版 2 分鐘內唔會重載第二次（防無限重載）
+   · reload 之前做埋排緊隊嘅同步
+   版本號 regex 用字串砌，唔係會搵到呢行自己。 */
+const VER_RE = new RegExp("const VER" + "SION = '([^']+)'");
+let lastUpdCheck = 0;
+async function checkUpdate(manual) {
+  lastUpdCheck = Date.now();
+  const r = await fetch(location.pathname + '?vcheck=' + Date.now(), { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const latest = (await r.text()).match(VER_RE)?.[1];
+  if (!latest) throw new Error('讀唔到版本號');
+  if (latest === VERSION) return false;
+  if (!manual) {
+    if ($$('dialog').some(d => d.open)) return false;
+    try {
+      const last = JSON.parse(sessionStorage.getItem('ck.reload') || 'null');
+      if (last && last.v === latest && Date.now() - last.t < 120000) return false;
+      sessionStorage.setItem('ck.reload', JSON.stringify({ v: latest, t: Date.now() }));
+    } catch { /* sessionStorage 用唔到都照做 */ }
+  }
+  toast(`有新版 ${latest}，載入緊…`);
+  await flushSync();
+  setTimeout(() => location.replace(location.pathname + '?v=' + encodeURIComponent(latest)), 600);
+  return true;
+}
+const autoUpdate = () => checkUpdate(false).catch(() => {});
 $('#checkUpdate').onclick = async () => {
   const btn = $('#checkUpdate');
   btn.disabled = true; btn.textContent = '檢查緊…';
-  try {
-    const r = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
-    const html = await r.text();
-    const latest = html.match(/const VERSION = '([^']+)'/)?.[1];
-    if (!latest) throw new Error('讀唔到版本號');
-    if (latest === VERSION) { toast('已經係最新：' + VERSION); }
-    else {
-      toast(`有新版 ${latest}，載入緊…`);
-      setTimeout(() => location.replace(location.pathname + '?v=' + Date.now()), 600);
-    }
-  } catch (e) { toast('檢查唔到：' + e.message); }
+  try { if (!(await checkUpdate(true))) toast('已經係最新：' + VERSION); }
+  catch (e) { toast('檢查唔到：' + e.message); }
   finally { btn.disabled = false; btn.textContent = '檢查更新'; }
 };
+
+/* 轉走 App（iPhone 隨時會閂咗佢）：即刻做排緊隊嘅同步。
+   返到前景：超過 5 分鐘冇同步就同步一次，超過 10 分鐘冇檢查更新就檢查。 */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { flushSync(); return; }
+  if (SY.auto && SY.url && Date.now() - (SY.last || 0) > 5 * 60e3) doSync(true);
+  if (Date.now() - lastUpdCheck > 10 * 60e3) autoUpdate();
+});
+addEventListener('pagehide', () => { flushSync(); });
+
+/* 叫瀏覽器唔好自己清走呢個網嘅資料（Safari、Chrome 唔會彈嘢問；Firefox 會問，所以唔叫） */
+function askPersist() {
+  if (!navigator.storage?.persist || /Firefox\//.test(navigator.userAgent)) return;
+  if (!hasCollection() && !PH.size) return;
+  navigator.storage.persisted().then(p => p || navigator.storage.persist()).catch(() => {});
+}
+
 $('#aiKey').value = AI.key; $('#aiModel').value = AI.model; aiStatus();
 applyTheme(localStorage.getItem('ck.theme'));
 applyZoom(curZoom());
 
 (async () => {
-  await initI18n();               // 字典要喺圖鑑之前載，唔係啲名會譯漏
+  refresh();                      // 先出「載入緊」，唔好閃一下「圖鑑仲係空」
+  // 字典要喺圖鑑之前載，唔係啲名會譯漏；打卡相要喺畫格仔之前載
+  await Promise.all([initI18n(), initPhotos()]);
   loadCatalog(); refresh(); syncStatus(); renderMissing();
   await fetchCatalog();
   renderMissing();
   if (SY.auto && SY.url) doSync(true);
+  askPersist();
+  setTimeout(autoUpdate, 4000);
 })();
 
 </script>
